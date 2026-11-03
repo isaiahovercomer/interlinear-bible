@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="warm">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XfNbIyL+MLBUehurPcquxwYes7UVa8hXVmp7s2VNgFs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>原文對照聖經</title>
+<meta name="description" content="可離線使用的希臘文／希伯來文原文對照聖經">
+<meta name="theme-color" content="#FBF8F3">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preload" href="fonts/ILGreek-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+<script src="config.js"></script>
+<script>
+  // Apply saved theme / type size before first paint (no flash).
+  try {
+    const s = JSON.parse(localStorage.getItem('il.settings') || '{}');
+    const r = document.documentElement;
+    if (s.theme) r.dataset.theme = s.theme;
+    if (s.fontSize) r.style.setProperty('--fs', s.fontSize + 'px');
+    if (s.lineHeight) r.style.setProperty('--lh', s.lineHeight);
+  } catch {}
+</script>
+<link rel="modulepreload" href="js/main.js">
+<link rel="modulepreload" href="js/data.js">
+<link rel="modulepreload" href="js/books.js">
+<link rel="modulepreload" href="js/ref.js">
+<link rel="modulepreload" href="js/morph.js">
+<link rel="modulepreload" href="js/reader.js">
+<link rel="modulepreload" href="js/sheet.js">
+<link rel="modulepreload" href="js/spring.js">
+<link rel="modulepreload" href="js/wordcard.js">
+<link rel="modulepreload" href="js/picker.js">
+<link rel="modulepreload" href="js/search.js">
+<link rel="modulepreload" href="js/search-sources.js">
+<link rel="modulepreload" href="js/normalize.js">
+<link rel="modulepreload" href="js/views.js">
+<link rel="modulepreload" href="js/settings.js">
+<link rel="modulepreload" href="js/notes.js">
+<link rel="modulepreload" href="js/notesview.js">
+<link rel="modulepreload" href="js/editor.js">
+<link rel="modulepreload" href="js/syntax.js">
+<link rel="modulepreload" href="js/offline.js">
+<link rel="modulepreload" href="js/util.js">
+<link rel="modulepreload" href="js/sw-names.js">
+<link rel="modulepreload" href="js/version.js">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<div id="app">
+  <!-- 讀經 -->
+  <main id="view-read" class="view active" data-view="read">
+    <header class="topbar">
+      <button id="title" class="title press" title="選擇書卷" aria-haspopup="dialog">　</button>
+    </header>
+    <div id="pager" class="pager" aria-live="polite">
+      <article class="page"></article>
+      <article class="page"></article>
+      <article class="page"></article>
+    </div>
+    <div id="selbar" class="selbar" role="toolbar" aria-label="經文工具列" aria-hidden="true">
+      <span class="selcount"></span>
+      <button data-act="copy" class="press">複製</button>
+      <button data-act="share" class="press">分享</button>
+      <button data-act="bookmark" class="press">書籤</button>
+      <button data-act="note" class="press">筆記</button>
+      <button data-act="syntax" class="press" hidden>句法</button>
+      <button data-act="clear" class="press selx" aria-label="取消選取">✕</button>
+    </div>
+  </main>
+
+  <!-- 選書 -->
+  <section id="picker" class="picker" aria-hidden="true" inert>
+    <header class="picker-head">
+      <input id="jump" type="search" inputmode="search" enterkeyhint="go" autocomplete="off" spellcheck="false"
+             placeholder="跳到：約三16、jn3:16、太5">
+      <button id="picker-close" class="press linkbtn">關閉</button>
+    </header>
+    <div id="jump-hint" class="jump-hint" aria-live="polite"></div>
+    <div class="picker-body" id="picker-body"></div>
+  </section>
+
+  <!-- 搜尋 -->
+  <section id="view-search" class="view" data-view="search" hidden>
+    <header class="viewhead"><h1>搜尋</h1></header>
+    <form id="search-form" class="searchbar" role="search">
+      <input id="search-q" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false"
+             placeholder="經文出處、G/H 編號或關鍵字" aria-label="搜尋">
+      <div id="search-mode" class="seg2" role="radiogroup" aria-label="比對方式">
+        <button type="button" role="radio" data-mode="exact" class="press">精確</button>
+        <button type="button" role="radio" data-mode="fuzzy" class="press">模糊</button>
+      </div>
+    </form>
+    <p class="hint">經文出處（例：約3:16）直接跳過去；G/H 編號（例：G25）列出出處；其他字詞搜尋原文、中文與英文。模糊比對忽略希臘文重音與大小寫、希伯來文母音與重音符號、中文標點。</p>
+    <div id="search-results" class="results"></div>
+  </section>
+
+  <!-- 書籤筆記 -->
+  <section id="view-notes" class="view" data-view="notes" hidden>
+    <header class="viewhead"><h1>書籤與筆記</h1></header>
+    <div id="notes-list" class="results"></div>
+    <p class="hint">書籤與筆記只存在這台裝置（IndexedDB）。換手機或清除瀏覽器資料前，請先「匯出 JSON」備份。往左滑可以刪除。</p>
+  </section>
+
+  <!-- 設定 -->
+  <section id="view-settings" class="view" data-view="settings" hidden>
+    <header class="viewhead"><h1>設定</h1></header>
+    <div id="settings-body" class="settings"></div>
+  </section>
+
+  <nav id="tabbar" class="tabbar" aria-label="主要分頁">
+    <button data-tab="read" class="press active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14C9.5 18 6.5 18 4 19.5zM20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg><span>讀經</span></button>
+    <button data-tab="search" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span>搜尋</span></button>
+    <button data-tab="notes" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4.5-6 4.5z"/></svg><span>書籤筆記</span></button>
+    <button data-tab="settings" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>設定</span></button>
+  </nav>
+
+  <!-- 字卡 bottom sheet -->
+  <div id="sheet-backdrop" class="sheet-backdrop" aria-hidden="true"></div>
+  <section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="字卡" aria-hidden="true" data-snap="closed">
+    <div class="sheet-grip" aria-hidden="true"><span></span></div>
+    <div class="sheet-body" id="sheet-body" tabindex="-1"></div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+</body>
+</html>

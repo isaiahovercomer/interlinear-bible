@@ -1,0 +1,1 @@
+{"v":1,"events":[{"kind":"remap","book":"2Cor","src":"13:13","dst":"13:12"},{"kind":"remap","book":"2Cor","src":"13:14","dst":"13:13"},{"kind":"remap","book":"Phil","src":"1:17","dst":"1:16"},{"kind":"remap","book":"Phil","src":"1:16","dst":"1:17"},{"kind":"missing","book":"3John","src":null,"dst":"1:15"},{"kind":"missing","book":"Rev","src":null,"dst":"12:18"}]}
