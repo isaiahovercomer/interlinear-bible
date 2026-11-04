@@ -6,13 +6,16 @@ import { BOOK } from './books.js';
 import * as reader from './reader.js';
 import { sheet } from './sheet.js';
 import { initPicker, openPicker, close as closePicker, isOpen as pickerOpen } from './picker.js';
-import { initSearch } from './search.js';
+import { initSearch, run as runSearch } from './search.js';
 import { renderSettings } from './views.js';
 import { renderNotes, initNotes } from './notesview.js';
+import { initHome, homeReady, renderHome, lastRead, DEFAULT_START } from './home.js';
 import { $, $$, h, transition, toast } from './util.js';
 
 const tabbar = $('#tabbar');
 let tab = 'read';
+// a #Book.Ch deep link opens the reader; a plain visit lands on 首頁
+const deepLink = parseKey(location.hash.slice(1));
 
 // ---------- bars ----------
 function showBars() { tabbar.classList.remove('hide'); }
@@ -22,26 +25,43 @@ function hideBars() {
 }
 
 // ---------- tabs ----------
-function setTab(name) {
+function showTab(name) {
+  tab = name;
+  for (const v of $$('.view')) {
+    if (v.dataset.view === 'read') v.toggleAttribute('inert', name !== 'read');
+    else v.hidden = v.dataset.view !== name;
+  }
+  for (const b of $$('button', tabbar)) {
+    const on = b.dataset.tab === name;
+    b.classList.toggle('active', on);
+    on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  }
+  if (name === 'settings') renderSettings();
+  if (name === 'notes') renderNotes();
+  if (name === 'home') renderHome();
+  showBars();
+}
+// 首頁 has no hash (a reload stays home); the reader keeps #Book.Ch
+function syncHash() {
+  const r = reader.current();
+  const hash = tab === 'home' || !r ? '' : `#${r.book}.${r.ch}`;
+  if (location.hash !== hash) history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
+}
+function setTab(name, query, navigating = false) {
   if (name === tab) return;
   const target = $(`.view[data-view="${name}"]`);
-  transition(() => {
-    tab = name;
-    for (const v of $$('.view')) {
-      if (v.dataset.view === 'read') v.toggleAttribute('inert', name !== 'read');
-      else v.hidden = v.dataset.view !== name;
-    }
-    for (const b of $$('button', tabbar)) {
-      const on = b.dataset.tab === name;
-      b.classList.toggle('active', on);
-      on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
-    }
-    if (name === 'settings') renderSettings();
-    if (name === 'notes') renderNotes();
-    showBars();
-  }, target);
+  tab = name; // now, not in the (async) View Transition callback: navigate() may follow at once
+  const vt = transition(() => showTab(name), target);
   if (name !== 'read') { sheet.close(); closePicker(); }
-  if (name === 'search') setTimeout(() => $('#search-q').focus({ preventScroll: true }), 50);
+  // the reader is empty when the app started on 首頁: open where the user left off
+  if (name === 'read' && !navigating && !reader.current()) reader.open(lastRead() || DEFAULT_START);
+  syncHash();
+  if (name === 'search') {
+    if (query) { $('#search-q').value = query; runSearch(query); }
+    // focus once the view is shown (the View Transition swaps it in asynchronously)
+    const focus = () => { if (tab === 'search') $('#search-q').focus({ preventScroll: true }); };
+    vt ? vt.updateCallbackDone.then(focus, focus) : focus();
+  }
 }
 tabbar.addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) setTab(b.dataset.tab); });
 
@@ -52,33 +72,37 @@ export async function navigate(x) {
   if (!r || !BOOK[r.book]) return;
   if (pickerOpen()) closePicker();
   sheet.close(); // e.g. a #hash link while a word card / syntax sheet is open
-  if (tab !== 'read') setTab('read');
+  if (tab !== 'read') setTab('read', null, true);
   await reader.open(r, { v: r.v });
 }
 function onChapter(ref) {
   const key = `${ref.book}.${ref.ch}`;
   try { localStorage.setItem('il.last', key); } catch {}
-  history.replaceState(null, '', `${location.pathname}${location.search}#${key}`);
+  syncHash();
 }
 addEventListener('hashchange', () => { const r = parseKey(location.hash.slice(1)); if (r) navigate(r); });
 
 // ---------- boot ----------
 async function boot() {
   applySettings();
+  try { localStorage.removeItem('il.packs'); } catch {} // state of the removed 離線下載 (≤ 0.2.x)
   reader.setHooks({ showBars, hideBars, onChapter, navigate, openPicker: () => openPicker(reader.current()) });
   initSearch({ onNavigate: navigate });
   initNotes({ onNavigate: navigate });
+  initHome({ onNavigate: navigate, onTab: setTab });
+  if (!deepLink) showTab('home'); // before the first await: no flash of the empty reader
   try {
     await init();
   } catch (err) {
+    if (tab === 'home') showTab('read');
     $('#pager').children[1].replaceChildren(h('p.empty', `無法載入資料（${err.message}）。請確認資料目錄設定。`));
     $('#pager').scrollLeft = $('#pager').clientWidth;
     return;
   }
   initPicker({ onNavigate: navigate }); // after init(): greys out testaments the manifest lacks
+  homeReady();
   onChange((keys) => { if (keys.some(k => k === 'theme')) {/* applied via CSS vars */} });
-  const start = parseKey(location.hash.slice(1)) || parseKey(localStorage.getItem('il.last') || '') || { book: 'Matt', ch: 1 };
-  await reader.open(start, { v: start.v });
+  if (deepLink) await reader.open(deepLink, { v: deepLink.v });
   document.documentElement.dataset.ready = '1';
 }
 boot();

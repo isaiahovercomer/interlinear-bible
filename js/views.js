@@ -3,7 +3,6 @@ import { settings, update, THEMES, enabledVersions, secondLineId, setSecondLine 
 import { store, dictInfo, DATA_BASE } from './data.js';
 import { h, $ } from './util.js';
 import { SHELL_VERSION } from './version.js';
-import { openOffline } from './offline.js';
 
 // ---------- settings ----------
 export function renderSettings() {
@@ -58,7 +57,6 @@ export function renderSettings() {
     toggle('hebAccents', '希伯來文重音符號', '關閉時只顯示子音和母音（cantillation 隱藏）'),
     h('h2', '譯本（勾選與排序）'), secondRow, verRows,
     h('h2', '其他'),
-    h('button.row.press', { type: 'button', onclick: openOffline }, '離線下載', h('span', '›')),
     h('button.row.press', { type: 'button', onclick: openAbout }, '關於與授權', h('span', '›')),
   );
 }
@@ -69,10 +67,10 @@ function openAbout() {
   const panel = h('section.subpage', { role: 'dialog', 'aria-label': '關於與授權' },
     h('header.viewhead', h('button.linkbtn.press', { type: 'button', onclick: () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 320); } }, '‹ 設定'), h('h1', '關於與授權')),
     h('div.settings',
-      h('p', '原文對照聖經 PWA：新約希臘文、舊約希伯來文。讀過的章節可離線閱讀；也可以在「設定 › 離線下載」下載整本。'),
+      h('p', '原文對照聖經 PWA：新約希臘文、舊約希伯來文。讀過的章節會留在這台裝置，沒有網路時也能閱讀。'),
       h('h2', '經文與資料'),
       h('ul.lic', store.versions.map(v => h('li',
-        h('b', `${v.name}（${v.abbr}）`), h('small', ` ${v.lang} · ${v.pack}${v.size ? ` · ${(v.size / 1024 / 1024).toFixed(1)} MB` : ''}`),
+        h('b', `${v.name}（${v.abbr}）`), h('small', ` ${v.lang}${v.size ? ` · ${(v.size / 1024 / 1024).toFixed(1)} MB` : ''}`),
         h('div', '授權：', v.license.url ? h('a', { href: v.license.url, target: '_blank', rel: 'noopener' }, v.license.name) : v.license.name,
           v.license.file ? [' · ', h('a', { href: new URL(v.license.file, DATA_BASE).href, target: '_blank' }, '授權全文')] : null),
         v.license.note ? h('div.attr', v.license.note) : null,
