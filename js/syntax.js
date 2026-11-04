@@ -139,6 +139,5 @@ export async function syntaxView({ lang, book, ch, n, words, focus, onWord }) {
   try { tree = await verseTree(lang, book, ch, n); } catch {}
   if (!tree || !tree.roots.length) return h('p.hint', '這一節沒有句法資料（或目前離線，這一章的句法還沒讀過）。');
   const view = renderTree(tree, { lang, words, focus, onWord, labels: { roles: info.roles, cats: info.cats } });
-  if (info.attribution) view.append(h('p.syn-attr', info.attribution));
   return view;
 }

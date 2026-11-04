@@ -10,6 +10,7 @@ import { initSearch, run as runSearch } from './search.js';
 import { renderSettings } from './views.js';
 import { renderNotes, initNotes } from './notesview.js';
 import { initHome, homeReady, renderHome, lastRead, DEFAULT_START } from './home.js';
+import { initTour, maybeStartTour } from './tour.js';
 import { $, $$, h, transition, toast } from './util.js';
 
 const tabbar = $('#tabbar');
@@ -90,6 +91,7 @@ async function boot() {
   initSearch({ onNavigate: navigate });
   initNotes({ onNavigate: navigate });
   initHome({ onNavigate: navigate, onTab: setTab });
+  initTour({ setTab, tab: () => tab });
   if (!deepLink) showTab('home'); // before the first await: no flash of the empty reader
   try {
     await init();
@@ -104,6 +106,8 @@ async function boot() {
   onChange((keys) => { if (keys.some(k => k === 'theme')) {/* applied via CSS vars */} });
   if (deepLink) await reader.open(deepLink, { v: deepLink.v });
   document.documentElement.dataset.ready = '1';
+  // first visit: coach marks (after a deep link: now that the chapter is on screen, see tour.js)
+  maybeStartTour({ deepLink: !!deepLink });
 }
 boot();
 

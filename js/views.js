@@ -4,6 +4,7 @@ import { store, dictInfo, DATA_BASE } from './data.js';
 import { h, $ } from './util.js';
 import { icon } from './icons.js';
 import { SHELL_VERSION } from './version.js';
+import { replayTour } from './tour.js';
 
 // ---------- settings ----------
 export function renderSettings() {
@@ -29,8 +30,7 @@ export function renderSettings() {
     const tm = v.testament.length === 1 ? (v.testament[0] === 'NT' ? '新約' : '舊約') : null;
     return h('li', { 'data-ver': x.id },
       h('label.check', h('input', { type: 'checkbox', checked: x.on, onchange: (e) => save(list.map(y => y.id === x.id ? { ...y, on: e.target.checked } : y)) }),
-        h('span.vname', h('span', v.name), h('small', [v.abbr, tm, v.tok ? '可點字' : null].filter(Boolean).join(' · ')),
-          v.copyright ? h('small.copy', v.copyright) : null)),
+        h('span.vname', h('span', v.name), h('small', [v.abbr, tm, v.tok ? '可點字' : null].filter(Boolean).join(' · ')))),
       h('span.ord',
         h('button.press', { type: 'button', 'aria-label': `${v.abbr} 上移`, disabled: i === 0, onclick: () => { const nl = [...list]; [nl[i - 1], nl[i]] = [nl[i], nl[i - 1]]; save(nl); } }, '↑'),
         h('button.press', { type: 'button', 'aria-label': `${v.abbr} 下移`, disabled: i === list.length - 1, onclick: () => { const nl = [...list]; [nl[i + 1], nl[i]] = [nl[i], nl[i + 1]]; save(nl); } }, '↓')));
@@ -58,36 +58,28 @@ export function renderSettings() {
     toggle('hebAccents', '希伯來文重音符號', '關閉時只顯示子音和母音（cantillation 隱藏）'),
     h('h2', '譯本（勾選與排序）'), secondRow, verRows,
     h('h2', '其他'),
-    h('button.row.press', { type: 'button', onclick: openAbout }, '關於與授權', h('span', icon('next'))),
+    h('button#tour-replay.row.press', { type: 'button', onclick: replayTour }, '重新觀看使用教學', h('span', icon('next'))),
+    h('button.row.press', { type: 'button', onclick: openAbout }, '關於', h('span', icon('next'))),
   );
 }
 
 // ---------- about / licences ----------
 function openAbout() {
   const m = store.manifest || {};
-  const panel = h('section.subpage', { role: 'dialog', 'aria-label': '關於與授權' },
-    h('header.viewhead', h('button.linkbtn.press', { type: 'button', onclick: () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 320); } }, icon('back'), '設定'), h('h1', '關於與授權')),
+  const panel = h('section.subpage', { role: 'dialog', 'aria-label': '關於' },
+    h('header.viewhead', h('button.linkbtn.press', { type: 'button', onclick: () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 320); } }, icon('back'), '設定'), h('h1', '關於')),
     h('div.settings',
       h('p', '原文對照聖經 PWA：新約希臘文、舊約希伯來文。讀過的章節會留在這台裝置，沒有網路時也能閱讀。'),
       h('h2', '經文與資料'),
       h('ul.lic', store.versions.map(v => h('li',
-        h('b', `${v.name}（${v.abbr}）`), h('small', ` ${v.lang}${v.size ? ` · ${(v.size / 1024 / 1024).toFixed(1)} MB` : ''}`),
-        h('div', '授權：', v.license.url ? h('a', { href: v.license.url, target: '_blank', rel: 'noopener' }, v.license.name) : v.license.name,
-          v.license.file ? [' · ', h('a', { href: new URL(v.license.file, DATA_BASE).href, target: '_blank' }, '授權全文')] : null),
-        v.license.note ? h('div.attr', v.license.note) : null,
-        v.copyright ? h('div.attr', '著作權：', v.copyright) : null,
-        v.attribution ? h('div.attr', v.attribution) : null,
-        v.source_url ? h('div.attr', '來源：', h('a', { href: v.source_url, target: '_blank', rel: 'noopener' }, v.source_url)) : null))),
-      [...['G', 'H'].map(k => dictInfo(k)), ...['G', 'H'].map(k => m.dict_zh?.[k]), ...Object.values(m.syntax || {})].filter(Boolean)
-        .filter((d, i, a) => a.findIndex(x => (x.name || x.attribution) === (d.name || d.attribution)) === i).map(d => h('div.lic',
-        h('b', d.name || '字典'), d.license ? h('div', '授權：', normLic(d.license)) : null,
-        (d.attribution || d.license?.attribution) ? h('div.attr', d.attribution || d.license.attribution) : null)),
+        h('b', `${v.name}（${v.abbr}）`), h('small', ` ${v.lang}${v.size ? ` · ${(v.size / 1024 / 1024).toFixed(1)} MB` : ''}`)))),
+      [...['G', 'H'].map(k => dictInfo(k)), ...['G', 'H'].map(k => m.dict_zh?.[k]), ...Object.values(m.syntax || {})].filter(d => d?.name)
+        .filter((d, i, a) => a.findIndex(x => x.name === d.name) === i).map(d => h('div.lic', h('b', d.name))),
       m.fixture ? h('p.notice', '目前載入的是開發用 fixture 資料。') : null,
       h('h2', '字型'),
-      h('p', 'IL Greek：Gentium Plus 6.200 的希臘文子集；IL Hebrew：Ezra SIL 2.51 的希伯來文子集（含母音與重音符號）。兩者皆為 SIL International 製作，依 SIL Open Font License 1.1 授權（Ezra SIL 的希伯來文排版規則另依 MIT 授權）；詳見 ', h('a', { href: 'fonts/LICENSE', target: '_blank' }, 'fonts/LICENSE'), '。中文使用系統襯線字型。'),
+      h('p', 'IL Greek（Gentium Plus 子集）、IL Hebrew（Ezra SIL 子集）。中文使用系統襯線字型。'),
       h('h2', '技術資訊'),
       h('p.small', `App 版本 ${SHELL_VERSION} · 資料目錄 ${DATA_BASE}`)));
   document.body.append(panel);
   requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('open')));
 }
-const normLic = (l) => typeof l === 'string' ? l : (l.url ? h('a', { href: l.url, target: '_blank', rel: 'noopener' }, l.name) : l.name);

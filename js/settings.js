@@ -52,7 +52,12 @@ export function enabledVersions(translations) {
     // default: manifest.default_order (on, in that order), then the rest (off) in manifest order;
     // without default_order: the first two translations
     const order = (manifestOrder || all.slice(0, 2)).filter(id => all.includes(id));
-    return [...order.map(id => ({ id, on: true })), ...all.filter(id => !order.includes(id)).map(id => ({ id, on: false }))];
+    const rest = all.filter(id => !order.includes(id)).map(id => ({ id, on: false }));
+    const out = [...order.map(id => ({ id, on: true })), ...rest];
+    // RcV (English) sits directly below 中文恢復本 by default (a saved custom order is left alone)
+    const ri = out.findIndex(x => x.id === 'rcv-en'), zi = out.findIndex(x => x.id === 'rcv-zh');
+    if (ri >= 0 && zi >= 0 && ri !== zi + 1) { const [r] = out.splice(ri, 1); out.splice(out.findIndex(x => x.id === 'rcv-zh') + 1, 0, r); }
+    return out;
   }
   list = list.filter(x => all.includes(x.id));
   for (const id of all) if (!list.some(x => x.id === id)) list.push({ id, on: false });

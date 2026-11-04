@@ -16,7 +16,9 @@ let navigate = () => {};
 export function initSearch({ onNavigate }) { navigate = onNavigate; }
 
 const GROUPS = [['orig', '原文'], ['zh', '中文'], ['en', '英文']];
-const PAGE = 200;
+const FIRST = 50;   // rows per group on the first paint
+const PAGE = 100;   // rows added by 顯示更多 (fetched on demand by the index worker)
+const LIMIT = 1000; // rows listed per group at most (counts stay exact)
 const MODE_KEY = 'il.searchMode';
 let mode = 'fuzzy';
 try { mode = localStorage.getItem(MODE_KEY) === 'exact' ? 'exact' : 'fuzzy'; } catch {}
@@ -77,9 +79,20 @@ async function dictZh(s) {
   return (await get(s)) || (s.length > 5 ? get(s.slice(0, 5)) : null);
 }
 
+const BOOK_IX = new Map(BOOKS.map((b, i) => [b.id, i]));
+/** Sort verse keys in Bible order (merged sense lists come one list after another). */
+function canonical(keys) {
+  const ord = (k) => { const r = parseKey(k); return r ? (BOOK_IX.get(r.book) ?? 99) * 1e6 + r.ch * 1e3 + (r.v || 0) : Infinity; };
+  return [...keys].sort((a, b) => ord(a) - ord(b));
+}
+
 async function strongSearch(s) {
   out.replaceChildren(h('p.hint', '搜尋中…'));
-  const [refs, e, z] = await Promise.all([occurrences(s), dictEntry(s), dictZh(s).catch(() => null)]);
+  // a bare number whose occurrences are split by sense (H2617 → H2617A/B) merges its variants (dict `see`)
+  const ePromise = dictEntry(s).catch(() => null);
+  const [refs, e, z] = await Promise.all([
+    Promise.all([occurrences(s), ePromise]).then(async ([own, ent]) => (own.length ? own : canonical(await occurrences(s, ent?.see)))),
+    ePromise, dictZh(s).catch(() => null)]);
   const lang = s[0] === 'H' ? 'hbo' : 'grc';
   out.replaceChildren(
     h('div.res-head', h('b', s), e || z ? [' ', h('span', { lang }, e?.lemma || z?.lemma || ''), ' ', h('small', e?.gloss || '')] : null, h('small.cnt', ` ${refs.length} 處`)),
@@ -133,14 +146,14 @@ async function keywordSearch(text, script) {
     const list = h('ol.reslist');
     const empty = h('p.hint.g-empty', active.has(g) ? '' : (g === 'orig' ? '輸入希臘文或希伯來文以搜尋原文。' : g === 'zh' ? '輸入中文以搜尋中文譯本。' : '輸入英文以搜尋英文譯本（已讀過的章節）。'));
     const more = h('div.g-more');
-    groups[g] = { hits: [], shown: 0, cnt, list, empty, more, total: 0 };
+    groups[g] = { hits: [], shown: 0, want: FIRST, cnt, list, empty, more, total: 0, loading: false };
     return h('section.res-group', { 'data-group': g, class: active.has(g) ? 'res-group' : 'res-group off' }, h('h3', label, ' ', cnt), list, empty, more);
   });
   out.replaceChildren(progress, ...sections);
   out.dataset.qid = id;
   out.setAttribute('aria-busy', 'true');
   state = { id, text, script, groups, bar, status, progress, active };
-  getWorker().postMessage({ type: 'search', qid: id, q: text, script, mode, sources });
+  getWorker().postMessage({ type: 'search', qid: id, q: text, script, mode, sources, limit: LIMIT, first: FIRST });
 }
 
 function onMessage(e) {
@@ -150,11 +163,18 @@ function onMessage(e) {
   if (m.type === 'progress') {
     s.bar.style.transform = `scaleX(${(m.done / m.total).toFixed(3)})`;
     s.status.textContent = `搜尋中… ${m.label}`;
+  } else if (m.type === 'counts') { // index worker: lower bounds until final
+    s.indexed = true;
+    s.final = m.final;
+    for (const [g, n] of Object.entries(m.counts)) setCount(g, n);
+    for (const g of Object.keys(s.groups)) renderGroup(g);
   } else if (m.type === 'hits') {
     for (const hit of m.hits) s.groups[hit.group]?.hits.push(hit);
+    if (m.filled && s.groups[m.group]) s.groups[m.group].loading = false;
     for (const [g, n] of Object.entries(m.counts)) setCount(g, n);
     for (const g of Object.keys(s.groups)) renderGroup(g);
   } else if (m.type === 'done') {
+    s.final = true;
     for (const [g, n] of Object.entries(m.counts)) setCount(g, n);
     for (const [g, x] of Object.entries(s.groups)) {
       renderGroup(g);
@@ -175,23 +195,36 @@ function setCount(g, n) {
   const x = state.groups[g];
   if (!x || !state.active.has(g)) return;
   x.total = n;
-  x.cnt.textContent = String(n);
+  // the index worker's counts are lower bounds until every candidate verse has been checked
+  x.cnt.textContent = state.indexed && !state.final ? `≥${n}` : String(n);
 }
 
-function renderGroup(g, extra = 0) {
+function renderGroup(g) {
   const x = state.groups[g];
   if (!x) return;
-  const want = Math.min(x.hits.length, Math.max(PAGE, x.shown) + extra);
+  const want = Math.min(x.hits.length, x.want);
   if (want > x.shown) {
     x.list.append(...x.hits.slice(x.shown, want).map(row));
     x.shown = want;
   }
-  const rest = x.hits.length - x.shown;
+  // hits beyond the first page are only materialised on demand (index worker)
+  const cap = Math.min(Math.max(x.total, x.hits.length), LIMIT);
+  const rest = cap - x.shown;
   x.more.replaceChildren(
-    rest > 0 ? h('button.linkbtn.press', { type: 'button', 'data-more': g }, `顯示更多（還有 ${rest} 筆）`) : '',
-    !rest && x.total > x.hits.length ? h('p.hint', `只列出前 ${x.hits.length} 筆，請縮小搜尋範圍。`) : '');
+    rest > 0 ? h('button.linkbtn.press', { type: 'button', 'data-more': g, disabled: x.loading || null },
+      x.loading ? '載入中…' : `顯示更多（還有 ${rest} 筆）`) : '',
+    rest <= 0 && x.total > x.shown ? h('p.hint', `只列出前 ${x.shown} 筆，請縮小搜尋範圍。`) : '');
 }
-function showMore(g) { if (state) renderGroup(g, PAGE); }
+function showMore(g) {
+  const x = state?.groups[g];
+  if (!x || x.loading) return;
+  x.want = x.shown + PAGE;
+  if (state.indexed && x.hits.length < x.want && x.hits.length < Math.min(x.total, LIMIT)) {
+    x.loading = true;
+    worker.postMessage({ type: 'more', qid: state.id, group: g, upto: x.want });
+  }
+  renderGroup(g);
+}
 
 function row(r) {
   const ref = parseKey(r.key);

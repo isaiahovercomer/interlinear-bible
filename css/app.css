@@ -328,6 +328,23 @@ a { color: var(--accent); }
 .wc-peek { min-height: 0; }
 .wc-top { display: flex; align-items: baseline; gap: 12px; }
 .wc-word { font-size: 30px; line-height: 1.2; color: var(--fg); }
+.wc-say {
+  flex: none; align-self: center; position: relative; width: 36px; height: 36px; margin: 0 -4px;
+  display: inline-grid; place-items: center; border-radius: 50%; color: var(--accent); touch-action: manipulation;
+}
+.wc-say svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.wc-say:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* download progress ring (--p = 0…100) */
+.wc-say.loading::before {
+  content: ''; position: absolute; inset: 2px; border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1%), var(--accent-soft) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+}
+.wc-say.loading svg { opacity: .45; }
+.wc-say-prog { align-self: center; font: 12px var(--ui); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tts-ask p { margin: 4px 0 0; line-height: 1.6; }
+.tts-ask .tts-ask-note { font-size: 14px; color: var(--muted); }
 .wc-strong { font: 600 13px var(--ui); color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; margin-left: auto; }
 .wc-sub { margin-top: 2px; display: flex; gap: 10px; align-items: baseline; }
 .wc-lemma { font-size: 20px; }
@@ -617,3 +634,45 @@ a { color: var(--accent); }
 .home .home-head h1 { color: var(--chrome-fg); }
 .home .home-head p { color: var(--chrome-muted); }
 .home .home-head .home-logo { --logo: var(--chrome-accent); color: var(--chrome-accent); }
+
+/* ===== first-run tour (js/tour.js): dim + spotlight + bubble =====
+   Same brand chrome in every theme: navy bubble, cream text, gold ring / primary button.
+   The spotlight ring is gold outside a thin navy line, so it reads on cream pages (navy line)
+   and on navy / black pages (gold). Contrast: cream #F7F1E4 on #2F3343 ≈ 11:1,
+   gold #D9A466 on navy ≈ 6.3:1, navy on gold #C49356 ≈ 4.9:1, muted #C9C2B3 on navy ≈ 7.6:1. */
+.tour { position: fixed; inset: 0; z-index: 1000; opacity: 0; transition: opacity 220ms var(--ease); --tour-dim: rgba(16, 18, 28, .72); }
+.tour.on { opacity: 1; }
+.tour.closing { pointer-events: none; }
+.tour-catch { position: absolute; inset: 0; touch-action: none; }
+.tour-hole {
+  position: absolute; left: 0; top: 0; border-radius: 12px; pointer-events: none; contain: strict; will-change: transform;
+  box-shadow: 0 0 0 2px #2F3343, 0 0 0 5px #C49356, 0 0 0 200vmax var(--tour-dim);
+}
+.tour-bubble {
+  position: absolute; left: 0; top: 0; width: min(320px, calc(100vw - 24px)); will-change: transform;
+  background: #2F3343; color: #F7F1E4; border: 1px solid #C49356; border-radius: 16px;
+  padding: 14px 16px 12px; box-shadow: 0 12px 36px rgba(0, 0, 0, .35); font: 15px/1.6 var(--ui); text-align: left;
+}
+.tour-bubble.swap > :not(.tour-arrow) { animation: fade 200ms var(--ease) both; }
+.tour-arrow {
+  position: absolute; width: 12px; height: 12px; margin-left: -6px; background: #2F3343;
+  border: 1px solid #C49356; transform: rotate(45deg);
+}
+.tour-bubble[data-side="below"] .tour-arrow { top: -7px; border-right: 0; border-bottom: 0; }
+.tour-bubble[data-side="above"] .tour-arrow { bottom: -7px; border-left: 0; border-top: 0; }
+.tour-bubble[data-side="inside"] .tour-arrow { display: none; }
+.tour-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tour-head h2 { margin: 0; font: 600 17px/1.4 var(--serif-zh); color: #D9A466; letter-spacing: .04em; }
+.tour-count { flex: none; font: 600 12px var(--ui); color: #C9C2B3; font-variant-numeric: tabular-nums; }
+.tour-bubble p { margin: 6px 0 12px; }
+.tour-btns { display: flex; align-items: center; gap: 6px; }
+.tour-btns button { min-height: 40px; padding: 0 12px; border-radius: 99px; font: 500 15px var(--ui); color: #F7F1E4; }
+.tour-btns .tour-skip { color: #C9C2B3; padding-left: 4px; margin-right: auto; }
+.tour-btns .tour-next { background: #C49356; color: #2F3343; font-weight: 600; padding: 0 18px; }
+.tour-btns button:disabled { opacity: .4; cursor: default; }
+.tour-btns button:focus-visible { outline: 2px solid #F7F1E4; outline-offset: 2px; }
+.tour-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .tour { transition: opacity 160ms linear !important; }
+  .tour-bubble.swap > :not(.tour-arrow) { animation: none !important; }
+}

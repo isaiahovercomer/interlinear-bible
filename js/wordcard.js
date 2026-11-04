@@ -7,6 +7,7 @@ import { parseMorph } from './morph.js';
 import { parseKey, parseRef, refShort } from './ref.js';
 import { BOOK, BOOKS } from './books.js';
 import { h } from './util.js';
+import { sayWord, canSpeak, onVoices } from './speech.js';
 
 const HALF_N = 20;
 const KNOWN = { lemma: '原形', translit: '音譯', gloss: '簡義', def: '字義', strong: 'Strong', m: '詞類', pos: '詞性', derivation: '字源', kjv: 'KJV 譯法', zh: '中文', from: '查詢編號' };
@@ -48,6 +49,29 @@ export function renderDef(html) {
   return frag;
 }
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, '').replace(/__/g, '').trim();
+
+// 🔊 speaker icon in the app's line-icon style (stroke = currentColor)
+function speakerIcon() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const d of ['M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z', 'M15.5 9.5a3.5 3.5 0 0 1 0 5', 'M18 7a7 7 0 0 1 0 10']) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    svg.append(p);
+  }
+  return svg;
+}
+
+/** 🔊 button; taps must not reach the sheet (no drag, no close). */
+function sayButton(letter, getWord) {
+  const btn = h('button.wc-say.press', { type: 'button', 'aria-label': '播放發音', title: '播放發音', 'data-letter': letter }, speakerIcon());
+  for (const t of ['pointerdown', 'touchstart']) btn.addEventListener(t, (e) => e.stopPropagation(), { passive: true });
+  btn.addEventListener('click', (e) => { e.stopPropagation(); sayWord(btn, getWord); });
+  if (!canSpeak(letter)) { btn.hidden = true; onVoices(() => { btn.hidden = !canSpeak(letter); }); }
+  return btn;
+}
 
 function clean(t) { return String(t || '').replace(/[.,;:·’'"“”«»()\[\]—!?¶׃׀]/g, '').replace(/־$/, ''); }
 
@@ -109,10 +133,18 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
     if (sheet.snap !== 'full') sheet.snapTo('full');
   };
 
+  const headword = word ? clean(word.t) : (surface || '');
+  const entryP = s ? dictEntry(s) : Promise.resolve(null);
+  const say = sayButton(letter, async () => {
+    const e = await entryP.catch(() => null);
+    return { letter, surface: headword, lemma: e?.lemma || lemmaEl.textContent, translit: e?.translit || e?.xlit || '' };
+  });
+
   const root = h('div.wc', { 'data-strong': s || '' },
     h('section.wc-peek',
       h('div.wc-top',
-        h('span.wc-word', { lang, dir: lang === 'hbo' ? 'rtl' : null }, word ? clean(word.t) : (surface || '')),
+        h('span.wc-word', { lang, dir: lang === 'hbo' ? 'rtl' : null }, headword),
+        say,
         s ? h('span.wc-strong', s) : null),
       h('div.wc-sub', lemmaEl, trEl),
       morphs,
@@ -153,7 +185,7 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
     if (!lemmaEl.textContent && z.lemma) lemmaEl.textContent = z.lemma;
   }).catch(() => {});
 
-  dictEntry(s).then((e) => {
+  entryP.then((e) => {
     if (!e) { defEl.textContent = '字典中找不到這個編號。'; return; }
     if (!lemmaEl.textContent) lemmaEl.textContent = e.lemma || '';
     trEl.textContent = e.translit || e.xlit || '';
@@ -167,7 +199,7 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
       .flatMap(([k, v]) => [h('dt', KNOWN[k] || k), h('dd', { lang: k === 'lemma' ? lang : null }, String(v))]));
     if (e.see?.length > 1) entryEl.append(h('dt', '其他字義'), h('dd', e.see.map(x => h('button.chip.press', { type: 'button', 'data-see': x }, x))));
     const info = store.manifest?.dict?.[s[0]];
-    if (info?.name || info?.license) entryEl.append(h('dt', '來源'), h('dd', [info.name, info.license?.name].filter(Boolean).join(' · ')));
+    if (info?.name) entryEl.append(h('dt', '來源'), h('dd', info.name));
     return e;
   }).then((e) => occurrences(s, e?.see)).then((refs) => {
     countEl.textContent = `共 ${refs.length} 處`;
