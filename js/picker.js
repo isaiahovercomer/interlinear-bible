@@ -16,11 +16,12 @@ export function initPicker({ onNavigate }) {
   bodyEl.append(bookGrid({ scroller: bodyEl, onPick: go, current: () => currentRef }));
 }
 
-/** 舊約／新約 book grids with the in-place chapter grid (also used by the home view; needs init()). */
-export function bookGrid({ scroller, onPick, current = () => null }) {
+/** 舊約／新約 book grids with the in-place chapter grid (also used by the home view; needs init()).
+ *  short: one- or two-character 中文簡稱 (創、太、林前…) in equal square tiles (home view). */
+export function bookGrid({ scroller, onPick, current = () => null, short = false }) {
   const root = h('div.booksecs',
-    section('舊約', 'OT', store.originals.some(v => v.testament.includes('OT')) ? null : h('span.tag', '尚無希伯來文原文')),
-    section('新約', 'NT'));
+    section('舊約', 'OT', short, store.originals.some(v => v.testament.includes('OT')) ? null : h('span.tag', '尚無希伯來文原文')),
+    section('新約', 'NT', short));
   root.addEventListener('click', (e) => {
     const chb = e.target.closest('.chap');
     if (chb) { onPick({ book: chb.dataset.book, ch: +chb.dataset.ch }); return; }
@@ -36,12 +37,12 @@ function label(b) {
   return short.length <= 4 ? short : b.abbr;
 }
 
-function section(heading, testament, extra) {
-  const grid = h('div.bookgrid', { 'data-t': testament });
+function section(heading, testament, short, extra) {
+  const grid = h('div.bookgrid', { 'data-t': testament, class: `bookgrid${short ? ' short' : ''}` });
   for (const b of BOOKS.filter(x => x.testament === testament)) {
     // a testament with no original and no translation in the manifest is greyed out
     const empty = !store.versions.some(v => v.testament.includes(testament));
-    grid.append(h('button.book.press', { type: 'button', 'data-book': b.id, title: b.zh, class: `book press${empty ? ' ot' : ''}` }, label(b)));
+    grid.append(h('button.book.press', { type: 'button', 'data-book': b.id, title: b.zh, 'aria-label': b.zh, class: `book press${empty ? ' ot' : ''}` }, short ? b.abbr : label(b)));
   }
   return h('section.bsec', h('h2', heading, extra || null), grid);
 }

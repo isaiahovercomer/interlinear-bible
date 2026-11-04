@@ -1,7 +1,11 @@
 // User preferences (localStorage) + live application to the document.
 const KEY = 'il.settings';
 const DEFAULTS = { theme: 'warm', fontSize: 19, lineHeight: 1.75, showStrong: false, showMorph: false, hebAccents: true, versions: null };
-export const THEMES = { warm: { label: '暖白', color: '#FBF8F3' }, dark: { label: '深色', color: '#1C1B19' }, oled: { label: 'OLED 純黑', color: '#000000' } };
+// id 'warm' = 暖白 default reading theme (kept for saved settings); color = page background (swatch + <meta theme-color>)
+export const THEMES = {
+  warm: { label: '暖白', color: '#FAF6EE' }, light: { label: '淺色', color: '#FFFFFF' }, dark: { label: '深色', color: '#2F3343' },
+  oled: { label: 'OLED 純黑', color: '#000000' }, sepia: { label: '羊皮紙', color: '#F1E6CE' },
+};
 
 let state = { ...DEFAULTS };
 try { state = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
@@ -27,7 +31,7 @@ export function apply() {
   r.classList.toggle('ann-strong', !!state.showStrong);
   r.classList.toggle('ann-morph', !!state.showMorph);
   r.classList.toggle('no-heb-accents', !state.hebAccents);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEMES[state.theme]?.color || '#FBF8F3');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#2F3343') // brand navy (matches header/tab bar);
 }
 
 let manifestOrder = null;   // manifest.default_order (translations shown by default, in order)

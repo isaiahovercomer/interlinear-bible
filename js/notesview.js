@@ -5,6 +5,7 @@ import { openEditor } from './editor.js';
 import { refRangeLabel } from './ref.js';
 import { spring, reducedMotion } from './spring.js';
 import { h, $, toast } from './util.js';
+import { icon } from './icons.js';
 
 const root = $('#notes-list');
 const PREF = 'il.notesView';
@@ -62,8 +63,8 @@ function row(it) {
         it.color ? h('i.ndot', { 'data-color': it.color, 'aria-label': `顏色：${COLORS[it.color]}` }) : null,
         h('small.date', fmtDate(it.updated))),
       it.text ? h('span.ntext', it.text) : null),
-    h('button.press.nedit', { type: 'button', 'aria-label': `編輯 ${label}`, onclick: () => openEditor({ item: it, refs: it.refs }) }, '✎'),
-    h('button.press.ndel', { type: 'button', 'aria-label': `刪除 ${label}`, onclick: (e) => del(e.currentTarget.closest('li'), it) }, '✕'));
+    h('button.press.nedit', { type: 'button', 'aria-label': `編輯 ${label}`, onclick: () => openEditor({ item: it, refs: it.refs }) }, icon('edit')),
+    h('button.press.ndel', { type: 'button', 'aria-label': `刪除 ${label}`, onclick: (e) => del(e.currentTarget.closest('li'), it) }, icon('close')));
   const li = h('li.nrow', { 'data-id': it.id, 'data-kind': it.kind }, h('div.nunder', { 'aria-hidden': 'true' }, '刪除'), fg);
   swipe(li, fg, it);
   return li;
@@ -72,7 +73,7 @@ function row(it) {
 // ---------- swipe-left to delete (transform only) ----------
 function swipe(li, fg, it) {
   let d = null, x = 0, anim = null;
-  const set = (v) => { x = v; fg.style.transform = v ? `translate3d(${v}px,0,0)` : ''; li.style.setProperty('--reveal', Math.min(1, -v / 80).toFixed(3)); };
+  const set = (v) => { x = v; fg.style.transform = v ? `translate3d(${v}px,0,0)` : ''; li.style.setProperty('--reveal', Math.min(1, -v / 80).toFixed(3)); li.style.setProperty('--dx', `${v}px`); };
   fg.addEventListener('pointerdown', (e) => {
     if (e.button > 0 || e.target.closest('button')) return;
     anim?.stop();

@@ -2,6 +2,7 @@
 import { settings, update, THEMES, enabledVersions, secondLineId, setSecondLine } from './settings.js';
 import { store, dictInfo, DATA_BASE } from './data.js';
 import { h, $ } from './util.js';
+import { icon } from './icons.js';
 import { SHELL_VERSION } from './version.js';
 
 // ---------- settings ----------
@@ -57,7 +58,7 @@ export function renderSettings() {
     toggle('hebAccents', '希伯來文重音符號', '關閉時只顯示子音和母音（cantillation 隱藏）'),
     h('h2', '譯本（勾選與排序）'), secondRow, verRows,
     h('h2', '其他'),
-    h('button.row.press', { type: 'button', onclick: openAbout }, '關於與授權', h('span', '›')),
+    h('button.row.press', { type: 'button', onclick: openAbout }, '關於與授權', h('span', icon('next'))),
   );
 }
 
@@ -65,7 +66,7 @@ export function renderSettings() {
 function openAbout() {
   const m = store.manifest || {};
   const panel = h('section.subpage', { role: 'dialog', 'aria-label': '關於與授權' },
-    h('header.viewhead', h('button.linkbtn.press', { type: 'button', onclick: () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 320); } }, '‹ 設定'), h('h1', '關於與授權')),
+    h('header.viewhead', h('button.linkbtn.press', { type: 'button', onclick: () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 320); } }, icon('back'), '設定'), h('h1', '關於與授權')),
     h('div.settings',
       h('p', '原文對照聖經 PWA：新約希臘文、舊約希伯來文。讀過的章節會留在這台裝置，沒有網路時也能閱讀。'),
       h('h2', '經文與資料'),

@@ -6,11 +6,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>原文對照聖經</title>
 <meta name="description" content="可離線使用的希臘文／希伯來文原文對照聖經">
-<meta name="theme-color" content="#FBF8F3">
+<meta name="theme-color" content="#2F3343">
 <meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="alternate icon" href="favicon.ico" sizes="16x16 32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180">
+<meta property="og:type" content="website">
+<meta property="og:title" content="原文對照聖經">
+<meta property="og:description" content="可離線使用的希臘文／希伯來文原文對照聖經">
+<meta property="og:url" content="https://isaiahovercomer.github.io/interlinear-bible/">
+<meta property="og:image" content="https://isaiahovercomer.github.io/interlinear-bible/icons/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://isaiahovercomer.github.io/interlinear-bible/icons/og-image.png">
 <link rel="preload" href="fonts/ILGreek-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/app.css">
 <script src="config.js"></script>
@@ -45,11 +56,14 @@
 <link rel="modulepreload" href="js/editor.js">
 <link rel="modulepreload" href="js/syntax.js">
 <link rel="modulepreload" href="js/util.js">
+<link rel="modulepreload" href="js/icons.js">
 <link rel="modulepreload" href="js/sw-names.js">
 <link rel="modulepreload" href="js/version.js">
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
+<!-- IN CHRIST emblem watermark: fixed, behind every view, no layout / pointer events -->
+<div id="watermark" class="watermark" aria-hidden="true"></div>
 <div id="app">
   <!-- 讀經 -->
   <main id="view-read" class="view active" data-view="read">
@@ -68,30 +82,33 @@
       <button data-act="bookmark" class="press">書籤</button>
       <button data-act="note" class="press">筆記</button>
       <button data-act="syntax" class="press" hidden>句法</button>
-      <button data-act="clear" class="press selx" aria-label="取消選取">✕</button>
+      <button data-act="clear" class="press selx" aria-label="取消選取"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
   </main>
 
   <!-- 首頁 -->
   <section id="view-home" class="view home" data-view="home" hidden>
     <header class="home-head">
-      <h1>原文對照聖經</h1>
-      <p>希臘文・希伯來文原文與譯本對照</p>
+      <span id="home-logo" class="home-logo" role="img" aria-label="IN CHRIST 標誌（ΕΝ ΧΡΙΣΤΩ）"></span>
+      <div>
+        <h1>原文對照聖經</h1>
+        <p>希臘文・希伯來文原文與譯本對照</p>
+      </div>
     </header>
     <button id="home-continue" class="hcard hero press" type="button">
       <span class="hc-label">開始閱讀</span>
       <span class="hc-ref">　</span>
       <span class="hc-ver"></span>
-      <svg class="hc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      <svg class="ic hc-go" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>
     </button>
     <form id="home-search" class="home-search" role="search">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></svg>
       <input id="home-q" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false"
              placeholder="搜尋：約3:16、G25、愛" aria-label="搜尋經文">
     </form>
     <div class="home-quick">
-      <button type="button" class="hcard press" data-go="notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4.5-6 4.5z"/></svg><span>書籤與筆記</span></button>
-      <button type="button" class="hcard press" data-go="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>設定</span></button>
+      <button type="button" class="hcard press" data-go="notes"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12v17l-6-4.5-6 4.5z"/></svg><span>書籤與筆記</span></button>
+      <button type="button" class="hcard press" data-go="settings"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>設定</span></button>
     </div>
     <button id="home-votd" class="hcard votd press" type="button" hidden></button>
     <div id="home-books" class="home-books"></div>
@@ -136,12 +153,13 @@
     <div id="settings-body" class="settings"></div>
   </section>
 
+  <!-- icons: the js/icons.js set (24×24, stroke currentColor 1.75, round) -->
   <nav id="tabbar" class="tabbar" aria-label="主要分頁">
-    <button data-tab="home" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.5V20h4.75v-5.5h3.5V20h4.75V9.5"/></svg><span>首頁</span></button>
-    <button data-tab="read" class="press active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14C9.5 18 6.5 18 4 19.5zM20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg><span>讀經</span></button>
-    <button data-tab="search" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span>搜尋</span></button>
-    <button data-tab="notes" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4.5-6 4.5z"/></svg><span>書籤筆記</span></button>
-    <button data-tab="settings" class="press"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>設定</span></button>
+    <button data-tab="home" class="press"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h4.75v-5.5h3.5V20h4.75V9.5"/></svg><span>首頁</span></button>
+    <button data-tab="read" class="press active" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 5.5v14C9.5 18 6.5 18 4 19.5zM20 5.5C17.5 4 14.5 4 12 5.5v14c2.5-1.5 5.5-1.5 8 0z"/></svg><span>讀經</span></button>
+    <button data-tab="search" class="press"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></svg><span>搜尋</span></button>
+    <button data-tab="notes" class="press"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12v17l-6-4.5-6 4.5z"/></svg><span>書籤筆記</span></button>
+    <button data-tab="settings" class="press"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>設定</span></button>
   </nav>
 
   <!-- 字卡 bottom sheet -->

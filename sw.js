@@ -1,7 +1,7 @@
 // Service worker: versioned app-shell precache + stale-while-revalidate for data JSON
 // (chapters, dictionary, … the user has opened stay readable offline).
 // Bump VERSION whenever any shell file changes; old shell caches are deleted on activate.
-const VERSION = '0.3.1-1';
+const VERSION = '0.4.1-2';
 const SHELL_CACHE = `il-shell-${VERSION}`;
 const DATA_CACHE = 'il-data-v1'; // keep in sync with js/sw-names.js
 // Caches of the removed whole-Bible download (設定 › 離線下載, ≤ 0.2.x): deleted on activate.
@@ -15,9 +15,9 @@ const SHELL = [
   'css/app.css',
   'js/main.js', 'js/data.js', 'js/books.js', 'js/ref.js', 'js/morph.js', 'js/reader.js', 'js/sheet.js',
   'js/spring.js', 'js/wordcard.js', 'js/picker.js', 'js/home.js', 'js/search.js', 'js/search-sources.js', 'js/search-worker.js', 'js/normalize.js', 'js/views.js', 'js/settings.js',
-  'js/notes.js', 'js/notesview.js', 'js/editor.js', 'js/syntax.js', 'js/util.js', 'js/sw-names.js', 'js/version.js',
+  'js/notes.js', 'js/notesview.js', 'js/editor.js', 'js/syntax.js', 'js/util.js', 'js/sw-names.js', 'js/version.js', 'js/icons.js',
   'fonts/ILGreek-Regular.woff2', 'fonts/ILGreek-Bold.woff2', 'fonts/ILHebrew-Regular.woff2', 'fonts/LICENSE',
-  'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
+  'icons/in-christ.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.svg', 'icons/favicon-32.png',
 ];
 const SHELL_URLS = new Set(SHELL.map(p => new URL(p, self.registration.scope).href));
 

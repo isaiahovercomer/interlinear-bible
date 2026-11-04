@@ -51,7 +51,7 @@ export function initHome({ onNavigate, onTab }) {
 /** After data init(): version line, book grid, 今日經文. */
 export function homeReady() {
   ready = true;
-  $('#home-books').replaceChildren(bookGrid({ scroller: $('#view-home'), onPick: (r) => navigate(r), current: lastRead }));
+  $('#home-books').replaceChildren(bookGrid({ scroller: $('#view-home'), onPick: (r) => navigate(r), current: lastRead, short: true }));
   renderHome();
 }
 

@@ -3,6 +3,7 @@
 // Internal node: {cat, role, kids:[…]} | leaf {leaf:true, w (our word index) | null, p (morpheme) | null, x (text), role}
 import { syntaxChapter, syntaxInfo } from './data.js';
 import { h } from './util.js';
+import { icon } from './icons.js';
 
 // ---------- adapters ----------
 export const adapters = {
@@ -86,7 +87,7 @@ export function renderTree(tree, { lang = 'grc', words = [], focus = null, onWor
     const group = h('ul.syn-kids', { role: 'group', id }, n.kids.map(k => build(k, depth + 1)));
     return h('li.syn-node', { role: 'treeitem', 'aria-expanded': 'true', 'data-rg': rg, 'data-cat': n.cat || '' },
       h('div.syn-row',
-        h('button.syn-tog.press', { type: 'button', 'aria-controls': id, 'aria-label': '收合／展開' }, h('i', { 'aria-hidden': 'true' })),
+        h('button.syn-tog.press', { type: 'button', 'aria-controls': id, 'aria-label': '收合／展開' }, icon('down')),
         n.role ? h('span.syn-role', roles[n.role] || n.role) : null,
         h('span.syn-cat', n.cat ? (cats[n.cat] || n.cat) : '片段'),
         h('span.syn-prev', { lang, dir: rtl ? 'rtl' : null }, preview(n))),

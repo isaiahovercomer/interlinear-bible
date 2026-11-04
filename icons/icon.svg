@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#C0392B"/>
-  <path d="M120 150c48-26 96-26 136 0v230c-40-22-88-22-136 0zM392 150c-48-26-96-26-136 0v230c40-22 88-22 136 0z" fill="#FBF8F3"/>
-  <text x="188" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="120" font-style="italic" text-anchor="middle" fill="#C0392B">α</text>
-  <text x="324" y="300" font-family="'Noto Serif CJK TC', 'Noto Serif TC', serif" font-size="96" font-weight="700" text-anchor="middle" fill="#C0392B">道</text>
-</svg>
