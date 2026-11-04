@@ -11,7 +11,7 @@ import { initSearch, run as runSearch } from './search.js';
 import { renderSettings } from './views.js';
 import { initPrimer, renderPrimer } from './primer.js';
 import { renderNotes, initNotes } from './notesview.js';
-import { initHome, homeReady, renderHome, lastRead, DEFAULT_START } from './home.js';
+import { initHome, homeReady, renderHome, lastRead, DEFAULT_START, dailyReady } from './home.js';
 import { initTour, maybeStartTour, tourActive } from './tour.js';
 import { $, $$, h, transition, toast } from './util.js';
 
@@ -98,7 +98,7 @@ async function boot() {
   initNotes({ onNavigate: navigate });
   initHome({ onNavigate: navigate, onTab: setTab });
   initPrimer({ onNavigate: navigate });
-  initTour({ setTab, tab: () => tab, toast });
+  initTour({ setTab, tab: () => tab, toast, chapter: () => reader.current() || lastRead() || DEFAULT_START, daily: dailyReady });
   if (!deepLink) showTab('home'); // before the first await: no flash of the empty reader
   try {
     await init();

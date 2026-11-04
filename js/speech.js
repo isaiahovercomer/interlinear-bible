@@ -228,6 +228,8 @@ function confirmDownload(host) {
   });
 }
 
+const onScreen = (el) => el.isConnected && el.getClientRects().length > 0 && !el.closest('[hidden],[inert],[data-snap="closed"]');
+
 /**
  * Handle a tap on a 🔊 button. `getWord()` returns {letter, surface, lemma, translit} (may be async:
  * the dictionary entry can still be loading). The button shows download progress (data-p, --p).
@@ -258,6 +260,8 @@ export async function sayWord(btn, getWord) {
   if (my !== seq) return;
   if (!engineSupported() || !what.engine) { toast(what.engine ? '這個裝置無法播放發音' : '這個字沒有可用的讀音'); return; }
 
+  // 等系統語音可能已過 1–3 秒：使用者若已離開（換分頁、關字卡），就不要在別的畫面跳出下載對話框
+  if (!onScreen(btn)) return;
   if (!(await confirmDownload(btn.closest('.wc') || document.body))) return;
   unlockAudio(); // the 下載 click is a fresh gesture
   btn.classList.add('loading');

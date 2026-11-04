@@ -12,6 +12,11 @@
 import { spring, reducedMotion } from './spring.js';
 import { sheet } from './sheet.js';
 import { h, $ } from './util.js';
+import { BOOK } from './books.js';
+import { settings } from './settings.js';
+import { syntaxInfo } from './data.js';
+import { syntaxVerses } from './syntax.js';
+import { canSpeak } from './speech.js';
 
 const KEY = 'il.tour';
 export const TOUR_VERSION = 2; // 新增步驟時加 1，並在新步驟標 since: TOUR_VERSION
@@ -30,6 +35,9 @@ const visibleIn = (el) => el && el.getClientRects().length > 0 && !el.closest('[
  * optional: shown only if the target already exists (no waiting) — e.g. 🔊.
  * wait: ms to wait for the target (default WAIT). A target returning SKIP stops waiting at once.
  * since: tour version that added the step (old users are offered just these). title/text may be (el) => string.
+ * will(ctx): 開始前預判這一步會不會出現（true / false；undefined = 不確定）。預判 false 的步驟直接拿掉，
+ *   預判 true 的 optional 步驟一開始就算進總數——「n / 總數」從第 1 步起就不變（不會中途 20 → 21）。
+ *   ctx = { ref: 教學要打開的章, lang: 'grc' | 'hbo', letter: 'G' | 'H' }。
  */
 const SKIP = 'skip';
 // 首頁晨興卡片：資料到了才出現；讀不到時首頁顯示今日經文，就改指那張（home.js 設 data-votd）
@@ -44,6 +52,7 @@ const STEPS = [
   { id: 'continue', view: 'home', home: true, target: () => $('#home-continue'),
     title: '繼續閱讀', text: '從上次讀到的書卷章節接著讀；第一次使用會從馬太福音 1 開始。' },
   { id: 'mrv', view: 'home', home: true, since: 2, wait: 8000, target: dailyCard,
+    will: async () => { await hooks.daily(); const st = document.documentElement.dataset.votd; return st ? st !== 'none' : undefined; },
     title: (el) => isMrv(el) ? '今日晨興聖言經文' : '今日經文',
     text: (el) => isMrv(el) ? '每天自動換成當天的晨興聖言經文，有幾處就列幾處。點任一處就開到那一節，可以看原文、點字看字卡。'
       : '每天一節經文。點它就開到那一節，可以看原文、點字看字卡。' },
@@ -63,7 +72,7 @@ const STEPS = [
     title: '字卡', text: '原文、原形、Strong 編號、詞形和字義都在這裡。點背景或往下甩就關閉。' },
   { id: 'drag', view: 'read', card: true, target: () => sheet.open && $('#sheet .sheet-grip'),
     title: '往上拖看完整字典', text: '按住字卡上緣往上拖：半屏有完整字義，全屏有字典條目和全部出處。' },
-  { id: 'speak', view: 'read', card: true, optional: true,
+  { id: 'speak', view: 'read', card: true, optional: true, will: ({ letter }) => canSpeak(letter),
     target: () => sheet.open && [...$('#sheet').querySelectorAll('button')].find(b => /🔊|發音|发音/.test(`${b.textContent} ${b.getAttribute('aria-label') || ''}`)),
     title: '🔊 發音', text: '點喇叭聽這個字的讀音。' },
   { id: 'copyshot', view: 'read', card: true, target: () => sheet.open && $('#sheet .wc-peek .wc-acts'),
@@ -72,6 +81,7 @@ const STEPS = [
     title: '平行經文', text: '每節先列原文，下面是你選的譯本，右側小字是版本縮寫。要顯示哪些譯本、順序如何，在設定裡切換。' },
   // shown when the chapter has syntax data (prepare() waits for the icons, then no extra wait)
   { id: 'syntax', view: 'read', wait: 0, target: () => cur()?.querySelector('.verse .orig .syn-ic'),
+    will: async ({ ref, lang }) => !!settings.syntaxIcons && !!syntaxInfo(lang) && (await syntaxVerses(lang, ref.book, ref.ch)).length > 0,
     title: '句法圖示與顏色', text: '原文行末的小樹圖示表示這節有句法分析，點它打開句法圖。顏色區分主詞、動詞／述語、受詞、補語、修飾語／副詞和連接詞；點圖中的字，經文裡的字也用同一個顏色標出。圖示可以在設定裡關閉。' },
   { id: 'select', view: 'read', select: true, target: () => $('#selbar.show'),
     title: '書籤與筆記', text: '點節號選取經文，下方工具列可以複製、分享、截圖成圖片、加書籤或寫筆記；書籤筆記都收在「書籤筆記」分頁。' },
@@ -89,8 +99,9 @@ const STEPS = [
     title: '隨時重看', text: '想再看一次，點這裡「重新觀看使用教學」。祝你讀經愉快！' },
 ];
 
-let hooks = { setTab() {}, tab: () => 'home' };
-/** main.js: setTab(name), tab() → current tab name. */
+let hooks = { setTab() {}, tab: () => 'home', chapter: () => null, daily: () => Promise.resolve() };
+/** main.js: setTab(name), tab() → current tab name, chapter() → the chapter 讀經 will show,
+ *  daily() → promise: 首頁今日經文卡片 loaded (starts loading it). */
 export function initTour(h) { hooks = { ...hooks, ...h }; }
 
 /** Tour version the user has seen: 0 = never; the old flag '1' = version 1. */
@@ -123,12 +134,32 @@ export const tourActive = () => !!active;
 // ---------- runtime ----------
 let active = null; // { steps, i, skipped:Set, found:Set, from, focus, el, ... }
 
-function start({ home, steps: only }) {
+async function start({ home, steps: only }) {
   markSeen();
-  const steps = (only || STEPS).filter(s => home || !s.home);
-  active = { steps, i: -1, skipped: new Set(), found: new Set(), from: hooks.tab(), focus: document.activeElement, busy: false, hole: null, bub: null };
+  const a = active = { from: hooks.tab(), focus: document.activeElement }; // tourActive() while predicting
+  const all = (only || STEPS).filter(s => home || !s.home);
+  const will = await predict(all);
+  if (active !== a) return;
+  const steps = all.filter(s => will.get(s.id) !== false);
+  if (!steps.length) { active = null; return; }
+  const expect = new Set(steps.filter(s => will.get(s.id) === true).map(s => s.id));
+  Object.assign(a, { steps, i: -1, skipped: new Set(), found: expect, busy: false, hole: null, bub: null });
   build();
   go(0, 1);
+}
+
+const PREDICT_MS = 5000;
+/** Map step id → will(ctx) result (undefined when unknown, failed or too slow). */
+async function predict(steps) {
+  const ref = hooks.chapter();
+  const ot = ref && BOOK[ref.book]?.testament === 'OT';
+  const ctx = { ref, lang: ot ? 'hbo' : 'grc', letter: ot ? 'H' : 'G' };
+  const out = new Map();
+  const late = new Promise(r => setTimeout(r, PREDICT_MS));
+  await Promise.all(steps.filter(s => s.will && (ref || s.view !== 'read')).map(async (s) => {
+    try { out.set(s.id, await Promise.race([s.will(ctx), late.then(() => undefined)])); } catch {}
+  }));
+  return out;
 }
 
 function build() {
@@ -237,7 +268,7 @@ function counter() {
 function render(s) {
   const a = active;
   const [n, total] = counter();
-  const last = !a.steps.slice(a.i + 1).some(x => !a.skipped.has(x.id) && !x.optional);
+  const last = !a.steps.slice(a.i + 1).some(x => !a.skipped.has(x.id) && (!x.optional || a.found.has(x.id)));
   const title = typeof s.title === 'function' ? s.title(a.target) : s.title;
   const text = typeof s.text === 'function' ? s.text(a.target) : s.text;
   a.titleEl.textContent = title;

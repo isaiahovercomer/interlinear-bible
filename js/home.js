@@ -31,7 +31,7 @@ export function lastRead() {
 let navigate = () => {};
 let goTab = () => {};
 let ready = false;
-let votdStarted = false; // fetched the first time 首頁 is shown (not on deep-link starts)
+let votd = null; // 今日經文卡片：首頁第一次顯示時才抓（深層連結開啟時不抓），或使用教學預先要求
 
 export function initHome({ onNavigate, onTab }) {
   navigate = onNavigate;
@@ -58,7 +58,7 @@ export function homeReady() {
 /** Refresh the parts that change while the app runs (called whenever 首頁 is shown). */
 export function renderHome() {
   renderContinue();
-  if (ready && !votdStarted && !$('#view-home').hidden) { votdStarted = true; renderVerseOfDay(); }
+  if (!$('#view-home').hidden) dailyReady();
   // the expanded chapter grid follows the last-read chapter
   const open = $('#home-books .chapgrid');
   if (open) {
@@ -93,6 +93,12 @@ function votdVersion(testament) {
   if (has(rcv)) return rcv;
   return enabledVersions(store.translations).filter(x => x.on)
     .map(x => store.translations.find(t => t.id === x.id)).find(has) || null;
+}
+
+/** 今日經文卡片（晨興聖言或每日一節）載入完成；還沒開始就現在開始。完成後 <html data-votd> = mrv | votd | none。 */
+export function dailyReady() {
+  if (ready && !votd) votd = renderVerseOfDay().catch(() => {});
+  return votd || Promise.resolve();
 }
 
 async function renderVerseOfDay() {
