@@ -8,6 +8,7 @@ import { sheet } from './sheet.js';
 import { initPicker, openPicker, close as closePicker, isOpen as pickerOpen } from './picker.js';
 import { initSearch, run as runSearch } from './search.js';
 import { renderSettings } from './views.js';
+import { initPrimer, renderPrimer } from './primer.js';
 import { renderNotes, initNotes } from './notesview.js';
 import { initHome, homeReady, renderHome, lastRead, DEFAULT_START } from './home.js';
 import { initTour, maybeStartTour } from './tour.js';
@@ -40,6 +41,7 @@ function showTab(name) {
   if (name === 'settings') renderSettings();
   if (name === 'notes') renderNotes();
   if (name === 'home') renderHome();
+  if (name === 'primer') renderPrimer();
   showBars();
 }
 // 首頁 has no hash (a reload stays home); the reader keeps #Book.Ch
@@ -91,6 +93,7 @@ async function boot() {
   initSearch({ onNavigate: navigate });
   initNotes({ onNavigate: navigate });
   initHome({ onNavigate: navigate, onTab: setTab });
+  initPrimer({ onNavigate: navigate });
   initTour({ setTab, tab: () => tab });
   if (!deepLink) showTab('home'); // before the first await: no flash of the empty reader
   try {
