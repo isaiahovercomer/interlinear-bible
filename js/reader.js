@@ -12,6 +12,7 @@ import { addBookmark, chapterMarks, COLORS } from './notes.js';
 import { openEditor } from './editor.js';
 import { syntaxView } from './syntax.js';
 import { shotAndShare, fileSafe } from './shot.js';
+import { out as zhOut } from './zh.js';
 
 const pager = $('#pager');
 const titleBtn = $('#title');
@@ -572,9 +573,9 @@ selbar.addEventListener('click', async (e) => {
   if (act === 'clear') return clearSelection();
   if (act === 'copy') { await copyText(selectionText()); toast('已複製'); clearSelection(); }
   if (act === 'share') {
-    const text = selectionText();
+    const text = zhOut(selectionText());
     if (navigator.share) {
-      try { await navigator.share({ title: rangeLabel(), text }); clearSelection(); } catch (err) { if (err?.name !== 'AbortError') { await copyText(text); toast('無法分享，已改為複製'); } }
+      try { await navigator.share({ title: zhOut(rangeLabel()), text }); clearSelection(); } catch (err) { if (err?.name !== 'AbortError') { await copyText(text); toast('無法分享，已改為複製'); } }
     } else { await copyText(text); toast('此瀏覽器不支援分享，已複製'); clearSelection(); }
   }
   if (act === 'image') {

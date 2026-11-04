@@ -6,6 +6,7 @@ import { normStrong, occurrences, dictEntry, store, loadedChapters, DATA_BASE, u
 import { BOOKS } from './books.js';
 import { h, $ } from './util.js';
 import { detectQuery } from './normalize.js';
+import { readySearch, toTrad, forSet } from './zh.js';
 import { describeSources, slimChapter } from './search-sources.js';
 
 const form = $('#search-form');
@@ -13,7 +14,14 @@ const q = $('#search-q');
 const out = $('#search-results');
 const modeSeg = $('#search-mode');
 let navigate = () => {};
-export function initSearch({ onNavigate }) { navigate = onNavigate; }
+export function initSearch({ onNavigate }) {
+  navigate = onNavigate;
+  // 簡體 input is searched as 繁體 (whatever the display setting): the table loads on first focus
+  // or when the browser is idle
+  const warm = () => readySearch().catch(() => {});
+  q.addEventListener('focus', warm, { once: true });
+  (self.requestIdleCallback || ((f) => setTimeout(f, 1500)))(warm);
+}
 
 const GROUPS = [['orig', '原文'], ['zh', '中文'], ['en', '英文']];
 const FIRST = 50;   // rows per group on the first paint
@@ -33,7 +41,7 @@ modeSeg.addEventListener('click', (e) => {
   mode = b.dataset.mode;
   try { localStorage.setItem(MODE_KEY, mode); } catch {}
   syncMode();
-  const d = detectQuery(q.value, parseRef);
+  const d = detectQuery(toTrad(q.value), parseRef);
   if (q.value.trim() && d.kind === 'keyword') run(q.value);
 });
 
@@ -44,7 +52,7 @@ q.addEventListener('input', () => {
   clearTimeout(typeTimer);
   const t = q.value.trim();
   if (!t) { cancel(); out.replaceChildren(); return; }
-  const d = detectQuery(t, parseRef);
+  const d = detectQuery(toTrad(t), parseRef);
   if (d.kind !== 'keyword' || (d.script === 'en' && t.length < 2)) return;
   typeTimer = setTimeout(() => run(t), 280);
 });
@@ -57,6 +65,7 @@ out.addEventListener('click', (e) => {
 
 export async function run(text) {
   text = text.trim();
+  if (text) { try { await readySearch(); } catch {} text = toTrad(text); }
   clearTimeout(typeTimer);
   if (!text) { cancel(); out.replaceChildren(); return; }
   const d = detectQuery(text, parseRef);
@@ -153,7 +162,9 @@ async function keywordSearch(text, script) {
   out.dataset.qid = id;
   out.setAttribute('aria-busy', 'true');
   state = { id, text, script, groups, bar, status, progress, active };
-  getWorker().postMessage({ type: 'search', qid: id, q: text, script, mode, sources, limit: LIMIT, first: FIRST });
+  // per text set: its own variant of characters it never uses (和合本 裡 / 恢復本 裏)
+  const perSet = script === 'zh' ? sources.map(d => (d.script === 'zh' ? { ...d, q: forSet(d.id, text) } : d)) : sources;
+  getWorker().postMessage({ type: 'search', qid: id, q: text, script, mode, sources: perSet, limit: LIMIT, first: FIRST });
 }
 
 function onMessage(e) {

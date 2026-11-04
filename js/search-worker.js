@@ -1,5 +1,6 @@
 // Search worker (module worker). Keeps keyword matching off the UI thread.
 // in:  {type:'search', qid, q, script, mode:'exact'|'fuzzy', sources:[descriptor], limit, first}
+//      (a source descriptor may carry its own `q`: the query in that text's variant characters)
 //      {type:'more', qid, group, upto}    — index path: materialise hits of `group` up to `upto`
 //      {type:'cancel'}
 // out: {type:'progress', qid, done, total, label}
@@ -39,10 +40,10 @@ const fail = (qid, err) => { if (current === qid) post({ type: 'error', qid, mes
 
 async function run(m) {
   const descs = m.sources.filter(d => d.script === m.script);
-  const srcs = descs.map(d => fromDescriptor(d));
+  const srcs = descs.map(d => Object.assign(fromDescriptor(d), { q: d.q }));
   if (srcs.length && srcs.every(s => s instanceof ShardIndexSource) && await runIndexed(m, srcs)) return;
   if (current !== m.qid) return;
-  return runScan(m, descs.map(d => fromDescriptor(d, { scan: true })));
+  return runScan(m, descs.map(d => Object.assign(fromDescriptor(d, { scan: true }), { q: d.q })));
 }
 
 // ---------------- index ----------------
@@ -55,15 +56,16 @@ async function runIndexed({ qid, q, script, mode, limit = 1000, first = FIRST },
   const counts = { orig: 0, zh: 0, en: 0 };
   if (!needle) { post({ type: 'done', qid, counts, ms: 0 }); return true; }
   // candidates come from the fuzzy key: an exact match is also a fuzzy match (folding is per
-  // character), so exact queries use the fuzzy candidates and verify every one
-  const gramNeedle = fuzzy ? needle : keyFor(script, 'fuzzy', q);
+  // character), so exact queries use the fuzzy candidates and verify every one (per source, below)
   const cancelled = () => current !== qid;
   post({ type: 'progress', qid, done: 0, total: 2, label: '索引' });
   let parts;
   try {
     parts = await Promise.all(srcs.map(async src => {
-      const [{ ords, complete }, meta] = await Promise.all([src.candidates(gramNeedle), src.meta()]);
-      return { src, cands: ords, complete, meta };
+      const sq = src.q ?? q;
+      const pNeedle = keyFor(script, mode, sq);
+      const [{ ords, complete }, meta] = await Promise.all([src.candidates(fuzzy ? pNeedle : keyFor(script, 'fuzzy', sq)), src.meta()]);
+      return { src, cands: ords, complete, meta, needle: pNeedle };
     }));
   } catch (err) {
     if (!cancelled()) console.warn('search index unavailable, scanning the text sets', err);
@@ -101,16 +103,16 @@ async function runIndexed({ qid, q, script, mode, limit = 1000, first = FIRST },
   return true;
 }
 
-function matches(S, raw, key) {
+function matches(S, raw, key, needle = S.needle) {
   const hay = S.mode === 'fuzzy' ? (key ?? keyFor(S.script, 'fuzzy', raw)) : keyFor(S.script, 'exact', raw);
-  return hay.includes(S.needle);
+  return hay.includes(needle);
 }
 /** Is verse `ord` of part `p` a hit? (counts it the first time it is verified) */
 function check(S, p, ord, line) {
   if (!p.needs(ord)) return true;
   let ok = p.known.get(ord);
   if (ok === undefined) {
-    ok = matches(S, line.raw, line.key);
+    ok = matches(S, line.raw, line.key, p.needle);
     p.known.set(ord, ok);
     if (ok) S.counts[p.src.group]++;
   }
@@ -146,7 +148,7 @@ async function fillNow(S, g, upto) {
     if (!check(S, p, ord, line)) continue;
     const text = nfc(line.raw);
     g.out++;
-    batch.push({ key: p.meta.keys[ord], text, range: locate(S.script, S.mode, text, S.needle),
+    batch.push({ key: p.meta.keys[ord], text, range: locate(S.script, S.mode, text, p.needle ?? S.needle),
       abbr: p.src.abbr, src: p.src.id, lang: p.src.lang, dir: p.src.dir, group: g.group });
     if (g.out === EARLY && upto > EARLY) { flush(); prefetch(g, upto); } // first screen done: the rest of the page
     if (batch.length >= 50 || Date.now() - last > 120) flush();
@@ -215,9 +217,9 @@ function more({ qid, group, upto }) {
 async function runScan({ qid, q, script, mode, limit = 1000 }, srcs) {
   const t0 = Date.now();
   const fuzzy = mode === 'fuzzy';
-  const needle = keyFor(script, mode, q);
+  const base = keyFor(script, mode, q);
   const counts = { orig: 0, zh: 0, en: 0 };
-  if (!needle) { post({ type: 'done', qid, counts, ms: 0 }); return; }
+  if (!base) { post({ type: 'done', qid, counts, ms: 0 }); return; }
   const total = srcs.reduce((n, s) => n + s.units(), 0) || 1;
   let done = 0;
   const cancelled = () => current !== qid;
@@ -228,6 +230,7 @@ async function runScan({ qid, q, script, mode, limit = 1000 }, srcs) {
     pending = []; lastFlush = Date.now();
   };
   for (const src of srcs) {
+    const needle = src.q != null ? keyFor(script, mode, src.q) : base;
     const scope = {
       fuzzy, cancelled,
       onUnit: (label) => {

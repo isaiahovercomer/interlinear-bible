@@ -27,6 +27,13 @@ export function renderSettings() {
       onclick: () => { update({ theme: id }); renderSettings(); },
     }, h('i.sw', { style: `background:${t.color}` }), t.label)));
 
+  // 繁體／簡體: labels stay in their own script (data-zh-skip)
+  const zhRow = h('div.seg.zh-seg', { role: 'radiogroup', 'aria-label': '中文字體' },
+    [['hant', '繁體'], ['hans', '简体']].map(([id, label]) => h('button.press', {
+      type: 'button', role: 'radio', 'data-zh': id, 'data-zh-skip': '', 'aria-checked': String((settings.zh || 'hant') === id),
+      onclick: () => { update({ zh: id }); renderSettings(); },
+    }, label)));
+
   const slider = (key, label, min, max, step, fmt) => {
     const out = h('output', fmt(settings[key]));
     const inp = h('input', { type: 'range', min, max, step, value: settings[key], 'aria-label': label, 'data-key': key });
@@ -61,6 +68,8 @@ export function renderSettings() {
 
   root.replaceChildren(
     h('h2', '外觀'), themeRow,
+    h('h2#set-zh', '繁體／簡體'), zhRow,
+    h('p.set-note', '切換經文、字典、書名和介面的中文字；搜尋時繁體、簡體都可以輸入。'),
     slider('fontSize', '字級', 14, 28, 1, v => `${v}px`),
     slider('lineHeight', '行距', 1.3, 2.4, 0.05, v => v.toFixed(2)),
     h('p.preview', h('span', { lang: 'grc' }, 'Οὕτως γὰρ ἠγάπησεν ὁ θεὸς τὸν κόσμον'), h('br'), '神愛世人，甚至將他的獨生子賜給他們'),

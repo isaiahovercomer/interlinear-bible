@@ -2,7 +2,7 @@
 // (chapters, dictionary, … the user has opened stay readable offline) + cache-first for the
 // search index (sidx/…?v=<hash>: immutable per build; only files a search fetched are kept).
 // Bump VERSION whenever any shell file changes; old shell caches are deleted on activate.
-const VERSION = '0.4.10-1';
+const VERSION = '0.5.1-1';
 const SHELL_CACHE = `il-shell-${VERSION}`;
 const DATA_CACHE = 'il-data-v1'; // keep in sync with js/sw-names.js
 // Pronunciation engine (tts/*): not precached; the app stores it here when the user agrees to download
@@ -22,6 +22,7 @@ const SHELL = [
   'js/main.js', 'js/data.js', 'js/books.js', 'js/ref.js', 'js/morph.js', 'js/reader.js', 'js/sheet.js',
   'js/spring.js', 'js/wordcard.js', 'js/picker.js', 'js/home.js', 'js/search.js', 'js/search-sources.js', 'js/search-worker.js', 'js/search-index.js', 'js/normalize.js', 'js/views.js', 'js/settings.js',
   'js/notes.js', 'js/notesview.js', 'js/editor.js', 'js/syntax.js', 'js/util.js', 'js/sw-names.js', 'js/version.js', 'js/icons.js', 'js/tour.js', 'js/primer.js', 'js/primer-data.js', 'js/editions.js',
+  'js/zh.js', 'js/zh/t2s.json', 'js/zh/s2t.json',
   'js/speech.js', 'js/speech-text.js', 'js/shot.js', 'js/tts-info.js', 'js/tts-model.js', 'js/tts-worker.js',
   'fonts/ILGreek-Regular.woff2', 'fonts/ILGreek-Bold.woff2', 'fonts/ILHebrew-Regular.woff2', 'fonts/LICENSE',
   'icons/in-christ.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.svg', 'icons/favicon-32.png',

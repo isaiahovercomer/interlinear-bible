@@ -8,6 +8,7 @@ import { parseMorph } from './morph.js';
 import { parseKey, parseRef, refShort } from './ref.js';
 import { BOOK, BOOKS } from './books.js';
 import { h } from './util.js';
+import { plain as zhPlain } from './zh.js';
 import { sayWord, canSpeak, onVoices } from './speech.js';
 import { copyWithToast, shotAndShare, actButton, textOf, fileSafe } from './shot.js';
 
@@ -137,7 +138,7 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
   // 複製 / 截圖: what is on the card right now (dictionary text fills in as it loads)
   const refR = parseKey(refKey);
   const refLbl = refR ? refShort(refR) : '';
-  const defText = () => textOf(defFull) || (defEl.textContent === '載入中…' ? '' : textOf(defEl));
+  const defText = () => textOf(defFull) || (zhPlain(defEl) === '載入中…' ? '' : textOf(defEl));
   const zhDefText = () => (zhSec.hidden ? '' : textOf(zhDefEl));
   const parseText = () => [parseEl.textContent, word?.m ? `(${word.m})` : ''].filter(Boolean).join(' ');
   const cardText = () => {

@@ -1,6 +1,7 @@
 // App bootstrap: data init, tabs (View Transitions), bars, routing, service worker.
 import { init, store } from './data.js';
-import { apply as applySettings, onChange } from './settings.js';
+import { apply as applySettings, onChange, settings } from './settings.js';
+import { setScript } from './zh.js';
 import { parseKey, parseRef } from './ref.js';
 import { BOOK } from './books.js';
 import * as reader from './reader.js';
@@ -88,6 +89,9 @@ addEventListener('hashchange', () => { const r = parseKey(location.hash.slice(1)
 // ---------- boot ----------
 async function boot() {
   applySettings();
+  // 簡體: load the table before the first render (no flash of Traditional); 繁體 costs nothing
+  await setScript(settings.zh);
+  onChange((keys, st) => { if (keys.includes('zh')) setScript(st.zh); });
   try { localStorage.removeItem('il.packs'); } catch {} // state of the removed 離線下載 (≤ 0.2.x)
   reader.setHooks({ showBars, hideBars, onChapter, navigate, openPicker: () => openPicker(reader.current()) });
   initSearch({ onNavigate: navigate });

@@ -3,6 +3,7 @@
 // current CSS custom properties, RTL lines for Hebrew. Share = Web Share API with files when the
 // browser can share PNGs (Android / iOS), else the PNG is downloaded.
 import { h, toast, copyText } from './util.js';
+import { out as zhOut } from './zh.js'; // 簡體 setting: copies and images follow it
 
 const APP = '原文對照聖經';
 const W = 360, PAD = 22, SCALE = 3, MAX_LINES = 90;
@@ -12,7 +13,7 @@ const TOKEN = new RegExp(`\\n|[${CJK}]|\\s+|[^\\s${CJK}]+`, 'g');
 /** Copy `text`, toast 「已複製」 (or a hint when no clipboard is available). */
 export async function copyWithToast(text) {
   let ok = false;
-  try { ok = await copyText(text); } catch { ok = false; }
+  try { ok = await copyText(zhOut(text)); } catch { ok = false; }
   toast(ok ? '已複製' : '無法複製，請長按文字自行選取');
   return ok;
 }
@@ -78,6 +79,8 @@ function logo() {
  *        { rule: true }
  */
 export async function renderShot(blocks, { footer = '' } = {}) {
+  blocks = blocks.map(b => (b && typeof b.text === 'string' ? { ...b, text: zhOut(b.text) } : b));
+  footer = zhOut(footer);
   const t = theme();
   const font = (b) => `${b.weight || 400} ${b.size || 15}px ${t.fonts[b.font || 'zh']}`;
   try { await Promise.all(blocks.filter(b => b.text).map(b => document.fonts.load(font(b), b.text.slice(0, 200)))); } catch {}
@@ -109,7 +112,7 @@ export async function renderShot(blocks, { footer = '' } = {}) {
   ctx.fillStyle = t.chromeFg; ctx.font = `600 13px ${t.fonts.ui}`; ctx.textBaseline = 'alphabetic';
   const img = await logo();
   if (img) { try { ctx.drawImage(img, PAD, 6, 22, 22); } catch {} }
-  ctx.fillText(APP, PAD + (img ? 30 : 0), 22);
+  ctx.fillText(zhOut(APP), PAD + (img ? 30 : 0), 22);
   for (const o of ops) {
     if (o.rule) { ctx.fillStyle = t.line; ctx.fillRect(PAD, o.y, inner, 1); continue; }
     ctx.font = font(o.b);
@@ -124,7 +127,7 @@ export async function renderShot(blocks, { footer = '' } = {}) {
   ctx.fillStyle = t.muted; ctx.font = `12px ${t.fonts.ui}`;
   ctx.fillText(footer, PAD, H - PAD - 4);
   ctx.textAlign = 'right'; ctx.fillStyle = t.logo;
-  ctx.fillText(APP, W - PAD, H - PAD - 4);
+  ctx.fillText(zhOut(APP), W - PAD, H - PAD - 4);
   return c;
 }
 
@@ -132,6 +135,7 @@ const toBlob = (c) => new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(
 
 /** Share a canvas as PNG (Web Share with files), else download it. Returns 'shared' | 'cancel' | 'download'. */
 export async function shareCanvas(canvas, name, title) {
+  name = zhOut(name); title = zhOut(title);
   const blob = await toBlob(canvas);
   const file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
   if (file && navigator.canShare?.({ files: [file] }) && navigator.share) {

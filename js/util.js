@@ -1,3 +1,4 @@
+import { out as zhOut } from './zh.js';
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
@@ -53,6 +54,7 @@ export function trapFocus(root, active = () => true) {
 }
 
 export async function copyText(text) {
+  text = zhOut(text); // 簡體 setting
   try { await navigator.clipboard.writeText(text); return true; } catch {}
   const ta = h('textarea', { style: 'position:fixed;opacity:0' }, text);
   document.body.append(ta); ta.select();
