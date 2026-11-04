@@ -5,6 +5,18 @@ import { h, $ } from './util.js';
 import { icon } from './icons.js';
 import { SHELL_VERSION } from './version.js';
 import { replayTour } from './tour.js';
+import { EDITIONS, ZH_LEX, STRONG_SCHEME } from './editions.js';
+
+/** 「原文版本」 card: one block per language (edition, basis, lexicon, morphology). */
+export function editionsCard() {
+  const row = (k, v) => [h('dt', k), h('dd', v)];
+  return h('div.ed-card', ...Object.entries(EDITIONS).map(([lang, e]) => h('section.ed-lang', { 'data-lang': lang },
+    h('h3', e.label),
+    h('p.ed-name', e.name),
+    h('p.ed-note', e.note),
+    h('dl.ed-rows', ...row('資料', e.via), ...row('字典', `${e.lex}（${e.lexVia}）`), ...row('詞形', e.morph)))),
+    h('dl.ed-rows.ed-common', ...row('編號', STRONG_SCHEME), ...row('中文', ZH_LEX)));
+}
 
 // ---------- settings ----------
 export function renderSettings() {
@@ -52,6 +64,7 @@ export function renderSettings() {
     slider('fontSize', '字級', 14, 28, 1, v => `${v}px`),
     slider('lineHeight', '行距', 1.3, 2.4, 0.05, v => v.toFixed(2)),
     h('p.preview', h('span', { lang: 'grc' }, 'Οὕτως γὰρ ἠγάπησεν ὁ θεὸς τὸν κόσμον'), h('br'), '神愛世人，甚至將他的獨生子賜給他們'),
+    h('h2#set-editions', '原文版本'), editionsCard(),
     h('h2', '原文行'),
     toggle('showStrong', '小字 Strong 編號', '在每個原文字下方顯示'),
     toggle('showMorph', '小字詞形', '在每個原文字下方顯示詞形代碼'),
@@ -70,6 +83,7 @@ function openAbout() {
     h('header.viewhead', h('button.linkbtn.press', { type: 'button', onclick: () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 320); } }, icon('back'), '設定'), h('h1', '關於')),
     h('div.settings',
       h('p', '原文對照聖經 PWA：新約希臘文、舊約希伯來文。讀過的章節會留在這台裝置，沒有網路時也能閱讀。'),
+      h('h2', '原文版本'), editionsCard(),
       h('h2', '經文與資料'),
       h('ul.lic', store.versions.map(v => h('li',
         h('b', `${v.name}（${v.abbr}）`), h('small', ` ${v.lang}${v.size ? ` · ${(v.size / 1024 / 1024).toFixed(1)} MB` : ''}`)))),

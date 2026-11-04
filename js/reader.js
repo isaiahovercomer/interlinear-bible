@@ -1,5 +1,6 @@
 // Reading view: 3-page virtual pager over CSS scroll-snap, verse-interleaved rendering,
 // one delegated tap listener for words / tokens / verse numbers, verse selection.
+import { chapterCaption } from './editions.js';
 import { store, chapter, originalFor, versionById, baseStrong, verseText, wordStrongs, mainStrong, syntaxInfo } from './data.js';
 import { BOOK, BOOKS } from './books.js';
 import { settings, enabledVersions, onChange } from './settings.js';
@@ -10,6 +11,7 @@ import { sheet } from './sheet.js';
 import { addBookmark, chapterMarks, COLORS } from './notes.js';
 import { openEditor } from './editor.js';
 import { syntaxView } from './syntax.js';
+import { shotAndShare, fileSafe } from './shot.js';
 
 const pager = $('#pager');
 const titleBtn = $('#title');
@@ -180,6 +182,7 @@ function buildChapter(ref, orig, oc, trs, tcs, failed) {
   const b = BOOK[ref.book];
   const root = h('div.chapter', { 'data-key': `${ref.book}.${ref.ch}` });
   root.append(h('h2.chead', `${b.zh} ${ref.ch}`));
+  if (orig && oc?.verses?.length) root.append(h('p.ed-line', { lang: 'zh-Hant' }, h('span.ed-dot', { 'aria-hidden': 'true' }), chapterCaption(orig.lang)));
   const nums = new Set();
   const ov = new Map(oc?.verses?.map(v => [v.n, v]) || []);
   const tv = tcs.map(c => new Map(c?.verses?.map(v => [v.n, v]) || []));
@@ -543,6 +546,26 @@ function selectionText() {
   return lines.join('\n');
 }
 
+// 截圖: the selected verses as an image — original line + every visible version, verse by verse.
+function selectionBlocks() {
+  const m = models.get(pages[1]);
+  const ns = [...selected].sort((a, b) => a - b);
+  const heb = m.orig?.lang === 'hbo';
+  const b = [{ text: rangeLabel(), size: 18, weight: 600, color: 'accent' }];
+  const oMap = new Map(m.oc?.verses?.map(v => [v.n, v]) || []);
+  const tMaps = m.trs.map((v, i) => [v, new Map(m.tcs[i]?.verses?.map(x => [x.n, x]) || [])]);
+  ns.forEach((n, i) => {
+    if (i) b.push({ rule: true });
+    const o = oMap.get(n);
+    if (o) b.push({ text: `${n} ${verseText(o)}`, size: heb ? 21 : 18, font: heb ? 'hbo' : 'grc', dir: heb ? 'rtl' : null, lh: 1.7, gap: 8 });
+    for (const [v, map] of tMaps) {
+      const t = map.get(n);
+      if (t) b.push({ text: `${n} ${verseText(t)}`, size: 16, font: 'serif', lh: 1.65, gap: 6 }, { text: v.abbr || v.name || '', size: 11, font: 'ui', color: 'muted', gap: 0 });
+    }
+  });
+  return b;
+}
+
 selbar.addEventListener('click', async (e) => {
   const act = e.target.closest('button')?.dataset.act;
   if (!act || !selected.size) return;
@@ -553,6 +576,12 @@ selbar.addEventListener('click', async (e) => {
     if (navigator.share) {
       try { await navigator.share({ title: rangeLabel(), text }); clearSelection(); } catch (err) { if (err?.name !== 'AbortError') { await copyText(text); toast('無法分享，已改為複製'); } }
     } else { await copyText(text); toast('此瀏覽器不支援分享，已複製'); clearSelection(); }
+  }
+  if (act === 'image') {
+    const btn = e.target.closest('button');
+    const label = rangeLabel();
+    const r = await shotAndShare(btn, selectionBlocks(), { footer: label, name: `${fileSafe(label)}.png`, title: label });
+    if (r && r !== 'cancel') clearSelection();
   }
   if (act === 'bookmark') {
     const { existed } = await addBookmark(selectionKeys());

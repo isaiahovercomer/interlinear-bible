@@ -5,6 +5,8 @@ import { GREEK, HEBREW } from './primer-data.js';
 import { sayWord } from './speech.js';
 import { h, $ } from './util.js';
 import { refLabel } from './ref.js';
+import { EDITIONS } from './editions.js';
+import { copyWithToast, actButton } from './shot.js';
 
 const KEY = 'il.primer.lang';
 let navigate = () => {};
@@ -84,7 +86,10 @@ function example(ex, lang) {
     h('p.pr-step', h('b', '③ 讀音 '), h('span.pr-read', w.read))));
   const go = h('button.pr-go.press', { type: 'button' }, `到${refLabel(ex.ref)} 讀經 →`);
   go.addEventListener('click', () => navigate(ex.ref));
+  const copyTxt = () => [ex.words.map(w => w.w).join(' '), `讀作：${ex.whole}`,
+    ...ex.words.map(w => `${w.w}　${w.read}　${w.gloss}`), `${ex.label}「${ex.meaning}……」`].join('\n');
   return [
+    h('div.pr-ex-acts', actButton('copy', () => copyWithToast(copyTxt()))),
     h('p.pr-ex-verse', { lang, dir: heb ? 'rtl' : null }, ex.words.map(w => w.w).join(' ')),
     h('p.pr-ex-mean', `${ex.label}「${ex.meaning}……」｜全句讀作：`, h('span.pr-read', ex.whole)),
     h('ol.pr-ex', ...words),
@@ -135,11 +140,14 @@ function quiz(letters, lang, glyphOf, optOf) {
   return box;
 }
 
+const edNote = (lang) => { const e = EDITIONS[lang]; return h('p.pr-ed', h('b', `本 App 的${e.label}`), `${e.name}，${e.note}。`); };
+
 // ---------- the two languages ----------
 function greekPage() {
   const g = GREEK;
   return [
     h('p.pr-intro', g.intro),
+    edNote('grc'),
     section('pr-g-alpha', '1. 字母表',
       p('大寫｜小寫，下面是名稱、音譯和讀音。點字母聽名稱。'),
       h('div.pr-grid', ...g.letters.map(greekLetter))),
@@ -160,6 +168,7 @@ function hebrewPage() {
   const x = HEBREW;
   return [
     h('p.pr-intro', x.intro),
+    edNote('hbo'),
     section('pr-h-rtl', '1. 由右往左', list(x.rtl, 'ul'),
       h('div.pr-rtl-demo', { 'aria-hidden': 'true' },
         h('span.pr-arrow', '←'), h('span', { lang: 'hbo', dir: 'rtl' }, 'בְּרֵאשִׁית בָּרָא אֱלֹהִים'), h('span.pr-arrow', '開始'))),

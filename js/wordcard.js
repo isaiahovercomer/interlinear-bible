@@ -1,4 +1,5 @@
 // Word card content for the bottom sheet: peek / half / full sections.
+import { edFor } from './editions.js';
 import { sheet } from './sheet.js';
 import { dictEntry, dictZhEntry, occurrences, normStrong, chapter, store, versionById, verseText, originalFor, morphZh, mainStrong, mainLemma, wordStrongs } from './data.js';
 import { syntaxView } from './syntax.js';
@@ -8,6 +9,7 @@ import { parseKey, parseRef, refShort } from './ref.js';
 import { BOOK, BOOKS } from './books.js';
 import { h } from './util.js';
 import { sayWord, canSpeak, onVoices } from './speech.js';
+import { copyWithToast, shotAndShare, actButton, textOf, fileSafe } from './shot.js';
 
 const HALF_N = 20;
 const KNOWN = { lemma: '原形', translit: '音譯', gloss: '簡義', def: '字義', strong: 'Strong', m: '詞類', pos: '詞性', derivation: '字源', kjv: 'KJV 譯法', zh: '中文', from: '查詢編號' };
@@ -113,7 +115,7 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
   const [book, chs, vs] = String(refKey || '').split('.');
   const canSyntax = !!(word && verse?.w && store.manifest?.syntax?.[lang === 'hbo' ? 'hbo' : 'grc']);
   const dictPane = h('div.wc-pane', { role: 'tabpanel', id: 'wc-pane-dict', 'aria-labelledby': 'wc-tab-dict' },
-    h('h3', '字典條目'), defFull, entryEl,
+    h('div.wc-h-acts', h('h3', '字典條目'), h('span.wc-acts.wc-acts-full')), defFull, entryEl,
     h('h3.wc-all-h', '全部出處'), listFull);
   const synPane = h('div.wc-pane', { role: 'tabpanel', id: 'wc-pane-syn', 'aria-labelledby': 'wc-tab-syn', hidden: true });
   let synLoaded = false;
@@ -140,19 +142,58 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
     return { letter, surface: headword, lemma: e?.lemma || lemmaEl.textContent, translit: e?.translit || e?.xlit || '' };
   });
 
+  // 複製 / 截圖: what is on the card right now (dictionary text fills in as it loads)
+  const refR = parseKey(refKey);
+  const refLbl = refR ? refShort(refR) : '';
+  const defText = () => textOf(defFull) || (defEl.textContent === '載入中…' ? '' : textOf(defEl));
+  const zhDefText = () => (zhSec.hidden ? '' : textOf(zhDefEl));
+  const parseText = () => [parseEl.textContent, word?.m ? `(${word.m})` : ''].filter(Boolean).join(' ');
+  const cardText = () => {
+    const L = [[headword, s].filter(Boolean).join('　')];
+    const lem = lemmaEl.textContent, tr = trEl.textContent;
+    if (lem || tr) L.push(`原形：${lem}${tr ? `（${tr}）` : ''}`);
+    if (parseText()) L.push(`詞性：${parseText()}`);
+    if (!zhGlossEl.hidden && zhGlossEl.textContent) L.push(`中文：${zhGlossEl.textContent}`);
+    if (glossEl.textContent) L.push(`簡義：${glossEl.textContent}`);
+    if (zhDefText()) L.push(`中文字義：${zhDefText()}`);
+    if (defText()) L.push(`英文字義：${defText()}`);
+    if (refLbl) L.push(`出處：${refLbl}`);
+    return L.join('\n');
+  };
+  const cardBlocks = () => {
+    const rtl = lang === 'hbo' ? 'rtl' : null;
+    const lem = lemmaEl.textContent, tr = trEl.textContent;
+    const b = [
+      { text: headword, size: 32, font: lang, dir: rtl, lh: 1.35 },
+      { text: [s, tr].filter(Boolean).join('　'), size: 14, font: 'serif', weight: 600, color: 'accent' },
+    ];
+    if (lem && lem !== headword) b.push({ text: lem, size: 19, font: lang, dir: rtl, color: 'fg2' });
+    if (parseText()) b.push({ text: parseText(), size: 14, color: 'fg2' });
+    if (!zhGlossEl.hidden && zhGlossEl.textContent) b.push({ text: zhGlossEl.textContent, size: 17, weight: 600, gap: 8 });
+    if (glossEl.textContent) b.push({ text: glossEl.textContent, size: 15, font: 'serif' });
+    if (zhDefText()) b.push({ rule: true }, { text: '中文字義', size: 12, font: 'ui', weight: 600, color: 'muted' }, { text: zhDefText(), size: 15, maxLines: 30 });
+    if (defText()) b.push({ rule: true }, { text: '字義', size: 12, font: 'ui', weight: 600, color: 'muted' }, { text: defText(), size: 14, font: 'serif', maxLines: 36 });
+    return b;
+  };
+  const doCopy = () => copyWithToast(cardText());
+  const doShot = (btn) => shotAndShare(btn, cardBlocks(), { footer: [refLbl, s].filter(Boolean).join('　'), name: `${fileSafe(s || headword)}${refLbl ? '_' + fileSafe(refLbl) : ''}.png`, title: [headword, s].filter(Boolean).join(' ') });
+  const acts = () => [actButton('copy', doCopy), actButton('shot', doShot)];
+  dictPane.querySelector('.wc-acts-full').append(...acts());
+
   const root = h('div.wc', { 'data-strong': s || '' },
     h('section.wc-peek',
       h('div.wc-top',
         h('span.wc-word', { lang, dir: lang === 'hbo' ? 'rtl' : null }, headword),
         say,
         s ? h('span.wc-strong', s) : null),
-      h('div.wc-sub', lemmaEl, trEl),
+      h('div.wc-sub', lemmaEl, trEl, h('span.wc-acts', acts())),
       morphs,
       word?.m ? h('p.wc-parse', parseEl, h('code', word.m)) : null,
       zhGlossEl, glossEl, otMappingNote(surface, refKey)),
     h('section.wc-half',
       zhSec,
-      h('h3', '字義', h('small.wc-src', 'English')), defEl,
+      h('h3', '字義', h('small.wc-src', edFor(lang).lexShort)), defEl,
+      h('p.wc-ed', [`經文 ${edFor(lang).short}`, `字典 ${edFor(lang).lex}`, edFor(lang).morph].join(' · ')),
       h('h3', '其他出處 ', countEl), listHalf, moreEl),
     h('section.wc-full', tabs, dictPane, synPane),
   );
