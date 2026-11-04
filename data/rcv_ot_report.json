@@ -1,0 +1,16 @@
+{
+ "chapters": 929,
+ "verses": 23261,
+ "words": 603976,
+ "words_mapped": 239023,
+ "diffs": [],
+ "missing_chapters": [],
+ "method": "lex-ibm1",
+ "content_words": 257193,
+ "content_mapped": 239023,
+ "bridge_content_mapped": 174917,
+ "bridge_words_mapped": 186133,
+ "coverage": 0.3957,
+ "content_coverage": 0.9294,
+ "bridge_content_coverage": 0.6801
+}
