@@ -2,7 +2,7 @@
 // (chapters, dictionary, … the user has opened stay readable offline) + cache-first for the
 // search index (sidx/…?v=<hash>: immutable per build; only files a search fetched are kept).
 // Bump VERSION whenever any shell file changes; old shell caches are deleted on activate.
-const VERSION = '0.4.9-1';
+const VERSION = '0.4.10-1';
 const SHELL_CACHE = `il-shell-${VERSION}`;
 const DATA_CACHE = 'il-data-v1'; // keep in sync with js/sw-names.js
 // Pronunciation engine (tts/*): not precached; the app stores it here when the user agrees to download

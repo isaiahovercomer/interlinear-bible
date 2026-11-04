@@ -77,14 +77,6 @@ function sayButton(letter, getWord) {
 
 function clean(t) { return String(t || '').replace(/[.,;:·’'"“”«»()\[\]—!?¶׃׀]/g, '').replace(/־$/, ''); }
 
-// A tapped OT token of a version whose manifest tok_source has an OT entry (statistical mapping, e.g. 恢復本) gets a caveat line.
-function otMappingNote(surface, refKey) {
-  if (surface == null || BOOK[String(refKey || '').split('.')[0]]?.testament !== 'OT') return null;
-  const tk = [...document.querySelectorAll('.tr .tk.hl')].find(e => e.textContent === surface);
-  if (!versionById(tk?.closest('.tr')?.dataset.ver)?.tok_source?.OT) return null;
-  return h('p.hint.wc-otnote', { style: 'font-size:12px;margin:2px 0 0' }, '舊約對應僅供參考');
-}
-
 export function openWordCard({ word, strong, surface, refKey, onClose, onNavigate, focus, verse, wordIndex, onSyntaxWord }) {
   const s = normStrong(word ? mainStrong(word) : strong);
   const lang = s?.[0] === 'H' ? 'hbo' : 'grc';
@@ -189,7 +181,7 @@ export function openWordCard({ word, strong, surface, refKey, onClose, onNavigat
       h('div.wc-sub', lemmaEl, trEl, h('span.wc-acts', acts())),
       morphs,
       word?.m ? h('p.wc-parse', parseEl, h('code', word.m)) : null,
-      zhGlossEl, glossEl, otMappingNote(surface, refKey)),
+      zhGlossEl, glossEl),
     h('section.wc-half',
       zhSec,
       h('h3', '字義', h('small.wc-src', edFor(lang).lexShort)), defEl,
