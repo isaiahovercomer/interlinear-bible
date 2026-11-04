@@ -12,6 +12,7 @@ export const ICONS = {
   down: '<path d="m6 9 6 6 6-6"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  syntax: '<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v5M6 17v-2.5c0-1.4 1.1-2.5 2.5-2.5h7c1.4 0 2.5 1.1 2.5 2.5V17"/>',
 };
 
 /** icon('close') → <svg class="ic" …> (decorative: aria-hidden; label the button instead). */

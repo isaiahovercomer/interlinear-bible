@@ -1,6 +1,6 @@
 // User preferences (localStorage) + live application to the document.
 const KEY = 'il.settings';
-const DEFAULTS = { theme: 'warm', fontSize: 19, lineHeight: 1.75, showStrong: false, showMorph: false, hebAccents: true, versions: null, zh: 'hant' };
+const DEFAULTS = { theme: 'warm', fontSize: 19, lineHeight: 1.75, showStrong: false, showMorph: false, hebAccents: true, syntaxIcons: true, versions: null, zh: 'hant' };
 // id 'warm' = 暖白 default reading theme (kept for saved settings); color = page background (swatch + <meta theme-color>)
 export const THEMES = {
   warm: { label: '暖白', color: '#FAF6EE' }, light: { label: '淺色', color: '#FFFFFF' }, dark: { label: '深色', color: '#2F3343' },
@@ -31,6 +31,7 @@ export function apply() {
   r.classList.toggle('ann-strong', !!state.showStrong);
   r.classList.toggle('ann-morph', !!state.showMorph);
   r.classList.toggle('no-heb-accents', !state.hebAccents);
+  r.classList.toggle('no-syn-icons', !state.syntaxIcons);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#2F3343') // brand navy (matches header/tab bar);
 }
 

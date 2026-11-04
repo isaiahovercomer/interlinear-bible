@@ -1,4 +1,5 @@
-// Syntax view: collapsible, indented clause tree with role colours (主詞／動詞／受詞／補語／狀語).
+// Syntax view: collapsible, indented clause tree with role colours (主詞／動詞／受詞／補語／修飾語／連接詞);
+// a tapped word is reported with its constituent's colour group so the verse can use the same colour.
 // Data → view goes through an adapter so the on-disk format can change without touching the UI.
 // Internal node: {cat, role, kids:[…]} | leaf {leaf:true, w (our word index) | null, p (morpheme) | null, x (text), role}
 import { syntaxChapter, syntaxInfo } from './data.js';
@@ -10,6 +11,7 @@ export const adapters = {
   /** DATA_FORMAT.md §8.1 (MACULA lowfat projected per verse): verse {n, k:[…], un:[…]} */
   'macula-v1': {
     verses(json) { return new Map((json?.verses || []).map(v => [v.n, v])); },
+    has(v) { return !!v?.k?.length; },
     tree(v) {
       const conv = (o) => ('w' in o || 'x' in o)
         ? { leaf: true, w: Number.isInteger(o.w) ? o.w : null, p: Number.isInteger(o.p) ? o.p : null, x: o.x || '', role: o.r || null, unmatched: !!o.u }
@@ -20,6 +22,7 @@ export const adapters = {
   /** Early draft format (task brief): {verses:{"16":{t:{cat,role,c:[…],w:[i]}}}} */
   'draft-v0': {
     verses(json) { return new Map(Object.entries(json?.verses || {}).map(([n, v]) => [+n, v])); },
+    has(v) { return !!v?.t; },
     tree(v) {
       const conv = (o) => {
         const kids = (o.c || []).map(conv);
@@ -44,12 +47,32 @@ export async function verseTree(lang, book, ch, n) {
   return v ? ad.tree(v) : null;
 }
 
+/** Verse numbers of a chapter that have a syntax tree (one cached fetch per chapter; [] if none). */
+export async function syntaxVerses(lang, book, ch) {
+  let json = null;
+  try { json = await syntaxChapter(lang, book, ch); } catch {}
+  if (!json) return [];
+  const ad = pickAdapter(json);
+  return [...ad.verses(json)].filter(([, v]) => ad.has(v)).map(([n]) => n);
+}
+
 // ---------- labels ----------
 const ROLE_FALLBACK = { s: '主詞', v: '動詞', vc: '繫動詞', o: '受詞', o2: '第二受詞', io: '間接受詞', p: '補語', adv: '狀語', pp: '狀語', aux: '助詞' };
 const CAT_FALLBACK = { cl: '子句', np: '名詞片語', pp: '介系詞片語', vp: '動詞片語', advp: '副詞片語', adv: '副詞片語', adjp: '形容詞片語', nump: '數詞片語', relp: '關係詞片語', cjp: '連接詞片語', ijp: '感嘆詞片語' };
-// colour group per role (CSS: [data-rg])
+// colour group per role (CSS: [data-rg]); c = clause conjunction (cjp, or a conjunction word without a role)
 const GROUP = { s: 's', v: 'v', vc: 'v', o: 'o', o2: 'o', io: 'o', p: 'p', adv: 'a', pp: 'a', aux: 'x' };
-const LEGEND = [['s', '主詞'], ['v', '動詞'], ['o', '受詞'], ['p', '補語'], ['a', '狀語／修飾']];
+const COLOURED = new Set(['s', 'v', 'o', 'p', 'a', 'c']);
+const LEGEND = [['s', '主詞'], ['v', '動詞／述語'], ['o', '受詞'], ['p', '補語'], ['a', '修飾語／副詞'], ['c', '連接詞']];
+
+/** Is the leaf a conjunction? Greek CONJ / COND; Hebrew (OSHB) part-of-speech C, per morpheme. */
+function isConj(w, p, lang) {
+  const parts = String(w?.m || '').split('/');
+  if (lang !== 'hbo') return /^CON[JD]/.test(parts[0]);
+  if (p == null && parts.length > 1) return false; // whole word made of several morphemes
+  const i = p ?? 0;
+  const seg = (i === 0 ? parts[0]?.replace(/^[HA]/, '') : parts[i]) || '';
+  return seg[0] === 'C';
+}
 
 /**
  * Render a tree. opts: {lang, words (verse w[]), focus (word index to mark), onWord(i)}
@@ -75,16 +98,20 @@ export function renderTree(tree, { lang = 'grc', words = [], focus = null, onWor
   const preview = (n) => leaves(n).map(wordText).join(' ');
 
   let uid = 0;
-  const build = (n, depth) => {
-    const rg = GROUP[n.role] || null;
+  // up: colour group inherited from the nearest ancestor with a role (= CSS --c inheritance)
+  const build = (n, depth, up = null) => {
+    let rg = GROUP[n.role] || null;
     if (n.leaf) {
-      return h('li.syn-leaf', { role: 'treeitem', 'data-rg': rg, 'data-w': n.w ?? '', class: `syn-leaf${n.w === focus && focus != null ? ' on' : ''}${n.unmatched ? ' um' : ''}` },
+      if ((!rg || rg === 'x') && n.w != null && isConj(words[n.w], n.p, lang)) rg = 'c';
+      const eg = rg || up; // the constituent this word belongs to: its tap colour in the verse
+      return h('li.syn-leaf', { role: 'treeitem', 'data-rg': rg, 'data-eg': COLOURED.has(eg) ? eg : null, 'data-w': n.w ?? '', class: `syn-leaf${n.w === focus && focus != null ? ' on' : ''}${n.unmatched ? ' um' : ''}` },
         n.role ? h('span.syn-role', roles[n.role] || n.role) : null,
         h('button.syn-word.press', { type: 'button', lang, dir: rtl ? 'rtl' : null, disabled: n.w == null, 'data-w': n.w ?? '' }, wordText(n)),
         leafGloss(n) ? h('small.syn-gloss', leafGloss(n)) : null);
     }
+    if (!rg && n.cat === 'cjp') rg = 'c';
     const id = `syn-g${++uid}`;
-    const group = h('ul.syn-kids', { role: 'group', id }, n.kids.map(k => build(k, depth + 1)));
+    const group = h('ul.syn-kids', { role: 'group', id }, n.kids.map(k => build(k, depth + 1, rg || up)));
     return h('li.syn-node', { role: 'treeitem', 'aria-expanded': 'true', 'data-rg': rg, 'data-cat': n.cat || '' },
       h('div.syn-row',
         h('button.syn-tog.press', { type: 'button', 'aria-controls': id, 'aria-label': '收合／展開' }, icon('down')),
@@ -125,7 +152,7 @@ export function renderTree(tree, { lang = 'grc', words = [], focus = null, onWor
       const i = +wb.dataset.w;
       root.querySelectorAll('.syn-leaf.on').forEach(x => x.classList.remove('on'));
       root.querySelectorAll(`.syn-leaf[data-w="${i}"]`).forEach(x => x.classList.add('on'));
-      onWord?.(i);
+      onWord?.(i, wb.closest('.syn-leaf').dataset.eg || null);
     }
   });
   return root;

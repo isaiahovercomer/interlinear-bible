@@ -78,6 +78,7 @@ export function renderSettings() {
     toggle('showStrong', '小字 Strong 編號', '在每個原文字下方顯示'),
     toggle('showMorph', '小字詞形', '在每個原文字下方顯示詞形代碼'),
     toggle('hebAccents', '希伯來文重音符號', '關閉時只顯示子音和母音（cantillation 隱藏）'),
+    toggle('syntaxIcons', '顯示句法圖示', '有句法資料的經節，在原文行末顯示小圖示，點一下打開句法圖'),
     h('h2', '譯本（勾選與排序）'), secondRow, verRows,
     h('h2', '其他'),
     h('button#tour-replay.row.press', { type: 'button', onclick: replayTour }, '重新觀看使用教學', h('span', icon('next'))),

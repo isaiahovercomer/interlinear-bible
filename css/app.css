@@ -42,6 +42,7 @@
   --hl: #F6E2B6; --sel: rgba(196, 147, 86, .12); --bar: rgba(250, 246, 238, .92); --capsule: #2F3343; --capsule-fg: #F7F1E4;
   --toast-act: #E3B57A; --danger: #B03A2E; --on-danger: #fff;
   --syn-s: #2F64A8; --syn-v: #B03A2E; --syn-o: #2B7A44; --syn-p: #7A4DB0; --syn-a: #8A6431; --syn-fg: #fff;
+  --syn-c: #2C6B70; --syn-mix: 20%; --syn-ic: rgba(74, 79, 99, .66);
   --shadow: 0 -6px 28px rgba(47, 51, 67, .16);
   color-scheme: light;
 }
@@ -52,6 +53,7 @@
   --hl: #F6E2B6; --sel: rgba(196, 147, 86, .12); --bar: rgba(255, 255, 255, .92); --capsule: #2F3343; --capsule-fg: #F7F1E4;
   --toast-act: #E3B57A; --danger: #B03A2E; --on-danger: #fff;
   --syn-s: #2F64A8; --syn-v: #B03A2E; --syn-o: #2B7A44; --syn-p: #7A4DB0; --syn-a: #8A6431; --syn-fg: #fff;
+  --syn-c: #2C6B70; --syn-mix: 18%; --syn-ic: rgba(74, 79, 99, .66);
   --shadow: 0 -6px 28px rgba(47, 51, 67, .14);
   color-scheme: light;
 }
@@ -62,6 +64,7 @@
   --hl: rgba(212, 158, 97, .30); --sel: rgba(212, 158, 97, .12); --bar: rgba(47, 51, 67, .92); --capsule: #1E2130; --capsule-fg: #F5EEDF;
   --toast-act: #D9A466; --danger: #B03A2E; --on-danger: #fff;
   --syn-s: #8DB8F0; --syn-v: #F0968C; --syn-o: #84CC9A; --syn-p: #C3A5EE; --syn-a: #E2B46E; --syn-fg: #1E2130;
+  --syn-c: #7CC9C3; --syn-mix: 30%; --syn-ic: rgba(226, 174, 112, .62);
   --shadow: 0 -6px 28px rgba(10, 12, 20, .5);
   color-scheme: dark;
 }
@@ -72,6 +75,7 @@
   --hl: rgba(212, 158, 97, .28); --sel: rgba(212, 158, 97, .12); --bar: rgba(0, 0, 0, .94); --capsule: #1C1E26; --capsule-fg: #EFE8DA;
   --toast-act: #D49E61; --danger: #B03A2E; --on-danger: #fff;
   --syn-s: #8DB8F0; --syn-v: #F0968C; --syn-o: #84CC9A; --syn-p: #C3A5EE; --syn-a: #E2B46E; --syn-fg: #000;
+  --syn-c: #7CC9C3; --syn-mix: 30%; --syn-ic: rgba(212, 158, 97, .62);
   --shadow: 0 -6px 28px rgba(0, 0, 0, .8);
   color-scheme: dark;
 }
@@ -82,6 +86,7 @@
   --hl: #EBCF94; --sel: rgba(160, 112, 52, .13); --bar: rgba(241, 230, 206, .92); --capsule: #2E2A33; --capsule-fg: #F5ECD8;
   --toast-act: #E3B57A; --danger: #A8372C; --on-danger: #fff;
   --syn-s: #2F64A8; --syn-v: #A8372C; --syn-o: #2B7A44; --syn-p: #7A4DB0; --syn-a: #7A5628; --syn-fg: #fff;
+  --syn-c: #2C6B70; --syn-mix: 20%; --syn-ic: rgba(74, 64, 56, .66);
   --shadow: 0 -6px 28px rgba(70, 50, 20, .18);
   color-scheme: light;
 }
@@ -598,7 +603,21 @@ html[data-zh="hans"] .wc-def.clamp.cut::after { content: "…（全文见全屏�
 .syn-legend { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
 .syn-legend span { font: 600 11px/1.8 var(--ui); padding: 0 7px; border-radius: 99px; color: var(--syn-fg); background: var(--c); }
 [data-rg="s"] { --c: var(--syn-s); } [data-rg="v"] { --c: var(--syn-v); } [data-rg="o"] { --c: var(--syn-o); }
-[data-rg="p"] { --c: var(--syn-p); } [data-rg="a"] { --c: var(--syn-a); } [data-rg="x"] { --c: var(--syn-x); }
+[data-rg="p"] { --c: var(--syn-p); } [data-rg="a"] { --c: var(--syn-a); } [data-rg="c"] { --c: var(--syn-c); } [data-rg="x"] { --c: var(--syn-x); }
+/* tapped word: tinted with its constituent's colour, in the tree and in the verse */
+.w.hl[data-rg], .syn-leaf.on[data-eg] .syn-word {
+  --tint: color-mix(in srgb, var(--c) var(--syn-mix), transparent);
+  background: var(--tint); box-shadow: 0 0 0 2px var(--tint), inset 0 -2px 0 var(--c);
+}/* per-verse syntax icon (end of the original line); 設定 › 顯示句法圖示 */
+.syn-ic {
+  position: relative; display: inline-grid; place-items: center; width: 20px; height: 20px; vertical-align: -2px;
+  color: var(--syn-ic); border-radius: 6px; line-height: 1;
+}
+.syn-ic::before { content: ""; position: absolute; inset: -8px; } /* larger touch target */
+.syn-ic .ic { width: 14px; height: 14px; }
+.syn-ic:hover, .syn-ic:focus-visible { color: var(--accent); }
+.syn-ic:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.no-syn-icons .syn-ic { display: none; }
 .syn-tree, .syn-kids { list-style: none; margin: 0; padding: 0; }
 .syn-kids { padding-left: 14px; margin-left: 9px; border-left: 1.5px solid var(--line); }
 .syn-kids:not([hidden]) { animation: fade var(--t-pop) var(--ease) both; }

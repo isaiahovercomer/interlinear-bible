@@ -25,6 +25,7 @@ const visibleIn = (el) => el && el.getClientRects().length > 0 && !el.closest('[
  * view: tab the step needs (null = any). card: word card open. select: a verse selected
  * (capsule toolbar shown). home: left out when the tour started from a deep link.
  * optional: shown only if the target already exists (no waiting) — e.g. 🔊.
+ * wait: ms to wait for the target (default WAIT).
  */
 const STEPS = [
   { id: 'continue', view: 'home', home: true, target: () => $('#home-continue'),
@@ -52,6 +53,9 @@ const STEPS = [
     title: '複製與截圖', text: '「複製」把原文、音譯、Strong 編號、字義和出處複製成文字；「截圖」把字卡做成圖片，可以直接分享或存下來。' },
   { id: 'parallel', view: 'read', target: () => [...(cur()?.querySelectorAll('.verse .vb') || [])].find(b => b.querySelector('.tr')),
     title: '平行經文', text: '每節先列原文，下面是你選的譯本，右側小字是版本縮寫。要顯示哪些譯本、順序如何，在設定裡切換。' },
+  // shown when the chapter has syntax data (prepare() waits for the icons, then no extra wait)
+  { id: 'syntax', view: 'read', wait: 0, target: () => cur()?.querySelector('.verse .orig .syn-ic'),
+    title: '句法圖示與顏色', text: '原文行末的小樹圖示表示這節有句法分析，點它打開句法圖。顏色區分主詞、動詞／述語、受詞、補語、修飾語／副詞和連接詞；點圖中的字，經文裡的字也用同一個顏色標出。圖示可以在設定裡關閉。' },
   { id: 'select', view: 'read', select: true, target: () => $('#selbar.show'),
     title: '書籤與筆記', text: '點節號選取經文，下方工具列可以複製、分享、截圖成圖片、加書籤或寫筆記；書籤筆記都收在「書籤筆記」分頁。' },
   { id: 'theme', view: 'settings', target: () => $('#settings-body .seg'),
@@ -155,6 +159,7 @@ async function prepare(s) {
   if (!s.card && sheet.open) sheet.close();
   if (s.select && !$('#selbar.show')) cur()?.querySelector('.verse .vn')?.click();
   if (s.id === 'tabbar') $('#tabbar').classList.remove('hide');
+  if (s.id === 'syntax') await cur()?._synReady;
 }
 
 async function go(i, dir) {
@@ -169,7 +174,7 @@ async function go(i, dir) {
   try {
     await prepare(s);
     if (active !== a) return;
-    el = await waitFor(s.target, s.optional ? 0 : WAIT);
+    el = await waitFor(s.target, s.optional ? 0 : s.wait ?? WAIT);
   } catch { el = null; }
   if (active !== a) return;
   a.busy = false;

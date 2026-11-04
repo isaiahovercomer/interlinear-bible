@@ -10,7 +10,8 @@ import { openWordCard } from './wordcard.js';
 import { sheet } from './sheet.js';
 import { addBookmark, chapterMarks, COLORS } from './notes.js';
 import { openEditor } from './editor.js';
-import { syntaxView } from './syntax.js';
+import { syntaxView, syntaxVerses } from './syntax.js';
+import { icon } from './icons.js';
 import { shotAndShare, fileSafe } from './shot.js';
 import { out as zhOut } from './zh.js';
 
@@ -65,6 +66,7 @@ export async function open(ref, { v, flash = !!v } = {}) {
 
 function chapterChanged() {
   setTitle(cur);
+  syntaxIcons(pages[1]);
   hooks.onChapter(cur);
 }
 
@@ -136,6 +138,7 @@ async function renderInto(page, ref) {
   page._ref = ref;
   page._lastTop = 0;
   page.scrollTop = 0;
+  page._synReady = null;
   models.delete(page);
   if (!ref) {
     page.replaceChildren(h('div.boundary', '已到盡頭'));
@@ -157,6 +160,28 @@ async function renderInto(page, ref) {
   page.replaceChildren(buildChapter(ref, orig, oc, trs, tcs, failed));
   models.set(page, { ref, orig, oc, trs, tcs });
   applyMarks(page);
+  if (page === pages[1]) syntaxIcons(page);
+}
+
+// ---------- per-verse syntax icon ----------
+// Current chapter only, after it has rendered: one (cached) fetch of the chapter's MACULA file,
+// then a small button at the end of the original line of each verse that has a tree.
+// page._synReady resolves once the icons are in (the tour waits on it).
+const synDone = new WeakMap(); // page → chapter model the icons were added for
+function syntaxIcons(page) {
+  const m = models.get(page);
+  if (!settings.syntaxIcons || !m || synDone.get(page) === m) return;
+  const lang = m.orig?.lang === 'hbo' ? 'hbo' : 'grc';
+  if (!m.oc?.verses?.length || !syntaxInfo(lang)) return;
+  synDone.set(page, m);
+  page._synReady = syntaxVerses(lang, m.ref.book, m.ref.ch).then((ns) => {
+    if (models.get(page) !== m) return;
+    for (const n of ns) {
+      const line = page.querySelector(`.verse[data-v="${n}"] .orig`);
+      if (!line || line.querySelector('.syn-ic')) continue;
+      line.append(' ', h('button.syn-ic.press', { type: 'button', title: '句法圖', 'aria-label': `第 ${n} 節句法圖` }, icon('syntax')));
+    }
+  });
 }
 
 // ---------- bookmark / note markers ----------
@@ -291,7 +316,10 @@ export async function rerender() {
   await Promise.all([renderInto(pages[0], neighbor(cur, -1)), renderInto(page, cur), renderInto(pages[2], neighbor(cur, 1))]);
   if (anchor) await scrollToVerse(page, anchor.n, false, anchor.offset);
 }
-onChange((keys) => { if (keys.includes('versions') || keys.includes('hebAccents')) rerender(); });
+onChange((keys) => {
+  if (keys.includes('versions') || keys.includes('hebAccents')) rerender();
+  else if (keys.includes('syntaxIcons')) syntaxIcons(pages[1]);
+});
 
 function topVisibleVerse(page) {
   const top = page.getBoundingClientRect().top + topOffset();
@@ -334,7 +362,7 @@ export async function scrollToVerse(page, n, flash, offset = 0) {
 
 // ---------- taps (single delegated listener) ----------
 function clearHighlights(scope = pager) {
-  scope.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
+  scope.querySelectorAll('.hl').forEach(e => { e.classList.remove('hl'); delete e.dataset.rg; });
 }
 
 function tokWords(tok, ov) {
@@ -421,6 +449,8 @@ pager.addEventListener('click', (e) => {
   const vn = e.target.closest('.vn');
   if (vn) { toggleSelect(n, verseEl); return; }
 
+  if (e.target.closest('.syn-ic')) { openSyntax(n); return; }
+
   const w = e.target.closest('.w');
   if (w) {
     const d = verseData(page, n);
@@ -467,20 +497,26 @@ function showCard(word, key, strong, surface, verse, wordIndex) {
   const n = +key.split('.')[2];
   openWordCard({
     word, strong, surface, refKey: key, verse, wordIndex,
-    onSyntaxWord: (i) => highlightWords(n, [i]),
+    onSyntaxWord: (i, rg) => highlightWords(n, [i], rg),
     onClose: () => clearHighlights(pages[1]),
     onNavigate: (r) => { sheet.close(); hooks.navigate?.(r); },
     focus: kbdOpen,
   });
 }
 
-/** Highlight original words `idxs` of verse n on the current page (syntax view → text). */
-export function highlightWords(n, idxs) {
+/** Highlight original words `idxs` of verse n on the current page (syntax view → text),
+ *  tinted with the colour of their constituent `rg` (s v o p a c) when given. */
+export function highlightWords(n, idxs, rg = null) {
   const page = pages[1];
   const verseEl = page.querySelector(`.verse[data-v="${n}"]`);
   if (!verseEl) return;
   clearHighlights(page);
-  for (const i of idxs) verseEl.querySelector(`.orig .w[data-i="${i}"]`)?.classList.add('hl');
+  for (const i of idxs) {
+    const w = verseEl.querySelector(`.orig .w[data-i="${i}"]`);
+    if (!w) continue;
+    w.classList.add('hl');
+    if (rg) w.dataset.rg = rg;
+  }
   const w = verseEl.querySelector('.orig .w.hl');
   if (w) {
     const r = w.getBoundingClientRect(), top = topOffset();
@@ -497,7 +533,7 @@ async function openSyntax(n) {
   const key = `${cur.book}.${cur.ch}.${n}`;
   const wrap = h('div.synwrap', h('h2.syn-title', `句法 · ${refRangeLabel([key])}`), h('p.hint', '載入句法…'));
   sheet.show(wrap, { at: 'half', onClose: () => clearHighlights(pages[1]), focus: true });
-  const view = ov?.w ? await syntaxView({ lang, book: cur.book, ch: cur.ch, n, words: ov.w, onWord: (i) => highlightWords(n, [i]) })
+  const view = ov?.w ? await syntaxView({ lang, book: cur.book, ch: cur.ch, n, words: ov.w, onWord: (i, rg) => highlightWords(n, [i], rg) })
     : h('p.hint', '這一節沒有原文資料。');
   wrap.replaceChildren(wrap.firstChild, view);
 }
