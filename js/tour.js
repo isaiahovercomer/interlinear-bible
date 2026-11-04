@@ -30,6 +30,8 @@ const visibleIn = (el) => el && el.getClientRects().length > 0 && !el.closest('[
 const STEPS = [
   { id: 'continue', view: 'home', home: true, target: () => $('#home-continue'),
     title: '繼續閱讀', text: '從上次讀到的書卷章節接著讀；第一次使用會從馬太福音 1 開始。' },
+  { id: 'mrv', view: 'home', home: true, optional: true, target: () => $('#home-mrv'),
+    title: '今日晨興聖言經文', text: '每天自動換成當天的晨興聖言經文，有幾處就列幾處。點任一處就開到那一節，可以看原文、點字看字卡。' },
   { id: 'search', view: 'home', home: true, target: () => $('#home-search'),
     title: '搜尋', text: '輸入經文出處（約3:16）、Strong 編號（G25）或字詞，都能找到。' },
   { id: 'books', view: 'home', home: true, target: () => $('#home-books .bookgrid[data-t="NT"]') || $('#home-books .bookgrid'),

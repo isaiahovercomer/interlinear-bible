@@ -1,4 +1,4 @@
-// 首頁: 繼續閱讀 card, quick search, shortcuts, 今日經文, 舊約／新約 book grid.
+// 首頁: 繼續閱讀 card, quick search, shortcuts, 今日晨興聖言經文（退回：今日經文）, 舊約／新約 book grid.
 import { store, chapter, originalFor, verseText } from './data.js';
 import { BOOK } from './books.js';
 import { parseKey, refLabel } from './ref.js';
@@ -96,6 +96,13 @@ function votdVersion(testament) {
 }
 
 async function renderVerseOfDay() {
+  // 今日晨興聖言經文；讀不到當天（或附近）的進度就退回原本的每日一節
+  try { if (await renderMorningRevival()) return; } catch { /* 退回今日經文 */ }
+  $('#home-mrv').hidden = true;
+  await renderDailyVerse();
+}
+
+async function renderDailyVerse() {
   const card = $('#home-votd');
   const r = parseKey(verseOfDay());
   const ver = r && votdVersion(BOOK[r.book].testament);
@@ -114,4 +121,90 @@ async function renderVerseOfDay() {
     h('span.votd-ref', refLabel(r), h('small', ver.abbr)));
   card.onclick = () => navigate(r);
   card.hidden = false;
+}
+
+// ---------- 今日晨興聖言經文 ----------
+// morning-revival.json（站點根目錄，GitHub Actions 每天更新）：台北召會追求進度定週別，淡水會所晨興聖言給每天經文。
+export const MRV_URL = 'morning-revival.json';
+const WD = '日一二三四五六';
+/** 台北時間的日期 YYYY-MM-DD 與星期（0 = 主日） */
+export function taipeiDay(now = new Date()) {
+  const t = new Date(now.getTime() + 8 * 3600e3);
+  return { date: t.toISOString().slice(0, 10), dow: t.getUTCDay() };
+}
+const addDays = (date, n) => new Date(Date.parse(date + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
+
+/**
+ * 今天要列的那一天：今天有就用今天；否則（主日、資料還沒更新）用一週內最近、不晚於今天的那一天。
+ * → {date, dow, today, week, weekTitle, refs} 或 null
+ */
+export function pickMorningRevival(json, now = new Date()) {
+  const { date: today } = taipeiDay(now);
+  const min = addDays(today, -7);
+  let best = null;
+  for (const w of json?.weeks || []) {
+    if (!/^\d{4}-\d\d-\d\d$/.test(w?.weekStart || '')) continue;
+    for (const [d, refs] of Object.entries(w.days || {})) {
+      const date = addDays(w.weekStart, +d - 1);
+      const ok = (refs || []).filter(r => BOOK[r?.book] && r.ch > 0 && r.v > 0);
+      if (!ok.length || date > today || date < min) continue;
+      if (!best || date > best.date) best = { date, dow: +d % 7, today: date === today, week: w.week || '', weekTitle: w.weekTitle || '', refs: ok };
+    }
+  }
+  return best;
+}
+
+/** 使用者選的第一個含這部約的譯本（沒有就恢復本） */
+function userVersion(testament) {
+  const has = (v) => v && v.testament.includes(testament);
+  return enabledVersions(store.translations).filter(x => x.on)
+    .map(x => store.translations.find(t => t.id === x.id)).find(has) || votdVersion(testament);
+}
+
+const MAX_VERSES = 6;
+async function passage(ver, r) {
+  const c = await chapter(ver.id, r.book, r.ch);
+  const last = Math.min(r.v2 || r.v, r.v + MAX_VERSES - 1);
+  const parts = [];
+  for (let n = r.v; n <= last; n++) {
+    const t = verseText(c?.verses?.find(v => v.n === n)).trim();
+    if (t) parts.push(t);
+  }
+  return parts.join(' ') + ((r.v2 || r.v) > last && parts.length ? ' …' : '');
+}
+
+const mrvLabel = (r) => `${BOOK[r.book].zh} ${r.ch}:${r.v}${r.v2 ? '-' + r.v2 : ''}`;
+
+async function renderMorningRevival() {
+  const card = $('#home-mrv');
+  let json = null;
+  try {
+    const res = await fetch(MRV_URL, { cache: 'no-cache' });
+    if (res.ok) json = await res.json();
+  } catch { /* 離線又沒有快取 */ }
+  const day = json && pickMorningRevival(json);
+  if (!day) return false;
+  const items = (await Promise.all(day.refs.map(async (r) => {
+    const ver = userVersion(BOOK[r.book].testament);
+    if (!ver) return null;
+    let text = '';
+    try { text = await passage(ver, r); } catch {}
+    return text ? { r, ver, text } : null;
+  }))).filter(Boolean);
+  if (!items.length) return false;
+  const sub = [day.week, `週${WD[day.dow]}`].filter(Boolean).join(' · ') + (day.weekTitle ? `　${day.weekTitle}` : '');
+  card.replaceChildren(
+    h('span.hc-label', '今日晨興聖言經文'),
+    h('span.mrv-week', sub),
+    ...items.map(({ r, ver, text }) => {
+      const b = h('button.mrv-item.press', { type: 'button', 'data-ref': `${r.book}.${r.ch}.${r.v}` },
+        h('span.votd-text', { lang: ver.lang || 'zh-Hant' }, text),
+        h('span.votd-ref', mrvLabel(r), h('small', ver.abbr)));
+      b.addEventListener('click', () => navigate({ book: r.book, ch: r.ch, v: r.v }));
+      return b;
+    }));
+  card.dataset.date = day.date;
+  card.hidden = false;
+  $('#home-votd').hidden = true;
+  return true;
 }

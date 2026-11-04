@@ -307,6 +307,11 @@ a { color: var(--accent); }
 .votd-text { display: block; font: 17px/1.75 var(--serif-zh); margin-top: 8px; color: var(--fg); }
 .votd-ref { display: block; font: 600 13px var(--ui); color: var(--fg2); margin-top: 8px; text-align: right; }
 .votd-ref small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.mrv { padding-bottom: 6px; }
+.mrv-week { display: block; font: 12px/1.6 var(--ui); color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.mrv-item { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 2px 0 10px; font: inherit; }
+.mrv-item + .mrv-item { border-top: .5px solid var(--line); padding-top: 6px; }
+.mrv-item .votd-text { margin-top: 6px; }
 .home-books { margin-top: 10px; }
 .home-books .bsec h2 { margin: 22px 4px 10px; }
 .home-books .book { height: 44px; border-radius: 12px; }

@@ -2,7 +2,7 @@
 // (chapters, dictionary, … the user has opened stay readable offline) + cache-first for the
 // search index (sidx/…?v=<hash>: immutable per build; only files a search fetched are kept).
 // Bump VERSION whenever any shell file changes; old shell caches are deleted on activate.
-const VERSION = '0.5.2-1';
+const VERSION = '0.5.3-1';
 const SHELL_CACHE = `il-shell-${VERSION}`;
 const DATA_CACHE = 'il-data-v1'; // keep in sync with js/sw-names.js
 // Pronunciation engine (tts/*): not precached; the app stores it here when the user agrees to download
@@ -66,6 +66,11 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(caches.open(SHELL_CACHE).then(c => c.match(clean)).then(r => r || fetch(req)));
     return;
   }
+  // 今日晨興聖言經文（每天更新）→ network-first，離線用快取
+  if (url.pathname.endsWith('/morning-revival.json')) {
+    e.respondWith(networkFirst(e, req));
+    return;
+  }
   // search index (immutable for a given ?v=hash) → cache-first
   const hash = url.searchParams.get('v');
   if (hash && /^[0-9a-f]{6,40}$/.test(hash) && url.pathname.includes('/sidx/')) {
@@ -77,6 +82,19 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(staleWhileRevalidate(e, req));
   }
 });
+
+async function networkFirst(e, req) {
+  const cache = await caches.open(DATA_CACHE);
+  try {
+    const res = await fetch(req, { cache: 'no-cache' });
+    if (res.ok) e.waitUntil(cache.put(req, res.clone()).catch(() => {}));
+    return res;
+  } catch (err) {
+    const hit = await cache.match(req, { ignoreSearch: true });
+    if (hit) return hit;
+    throw err;
+  }
+}
 
 let sidxCurrent = '';
 async function cacheFirst(e, req, name) {

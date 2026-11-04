@@ -4,3 +4,4 @@
 網址：https://isaiahovercomer.github.io/interlinear-bible/
 
 各資料來源的授權見 `data/licenses/` 與 `data/manifest.json`。
+`morning-revival.json`（今日晨興聖言經文）由 `.github/workflows/morning-revival.yml` 每天更新。

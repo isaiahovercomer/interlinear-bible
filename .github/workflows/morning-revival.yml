@@ -1,0 +1,36 @@
+# 今日晨興聖言經文：每天抓台北召會追求進度（週別）＋淡水會所晨興聖言（每天經文），
+# 有變化才更新 morning-revival.json。原始檔在私人 repo interlinear-bible-pwa 的 tools/morning-revival/，由部署帶過來。
+name: morning-revival
+on:
+  schedule:
+    - cron: '5 16,19,22 * * *' # 台北 00:05、03:05、06:05
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: morning-revival
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 抓取並解析
+        run: node .github/mrv/fetch-mrv.mjs morning-revival.json --books js/books.js
+      - name: 有變化才 commit
+        run: |
+          if git diff --quiet -- morning-revival.json && git ls-files --error-unmatch morning-revival.json >/dev/null 2>&1; then
+            echo "沒有變化"; exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add morning-revival.json
+          git commit -m "今日晨興聖言經文：更新 morning-revival.json"
+          for i in 1 2 3; do git push && exit 0; git pull --rebase; done
+          exit 1
