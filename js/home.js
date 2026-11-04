@@ -97,9 +97,10 @@ function votdVersion(testament) {
 
 async function renderVerseOfDay() {
   // 今日晨興聖言經文；讀不到當天（或附近）的進度就退回原本的每日一節
-  try { if (await renderMorningRevival()) return; } catch { /* 退回今日經文 */ }
+  const html = document.documentElement;
+  try { if (await renderMorningRevival()) { html.dataset.votd = 'mrv'; return; } } catch { /* 退回今日經文 */ }
   $('#home-mrv').hidden = true;
-  await renderDailyVerse();
+  try { await renderDailyVerse(); } finally { html.dataset.votd = $('#home-votd').hidden ? 'none' : 'votd'; }
 }
 
 async function renderDailyVerse() {

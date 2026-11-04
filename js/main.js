@@ -12,7 +12,7 @@ import { renderSettings } from './views.js';
 import { initPrimer, renderPrimer } from './primer.js';
 import { renderNotes, initNotes } from './notesview.js';
 import { initHome, homeReady, renderHome, lastRead, DEFAULT_START } from './home.js';
-import { initTour, maybeStartTour } from './tour.js';
+import { initTour, maybeStartTour, tourActive } from './tour.js';
 import { $, $$, h, transition, toast } from './util.js';
 
 const tabbar = $('#tabbar');
@@ -98,7 +98,7 @@ async function boot() {
   initNotes({ onNavigate: navigate });
   initHome({ onNavigate: navigate, onTab: setTab });
   initPrimer({ onNavigate: navigate });
-  initTour({ setTab, tab: () => tab });
+  initTour({ setTab, tab: () => tab, toast });
   if (!deepLink) showTab('home'); // before the first await: no flash of the empty reader
   try {
     await init();
@@ -122,5 +122,15 @@ boot();
 if ('serviceWorker' in navigator && !new URLSearchParams(location.search).has('nosw')) {
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) toast('App 已更新到新版本'); });
+  // 新版 SW 接手：剛打開不久（還沒開始用）就直接重新載入，讓這次就用到新版的 JS／CSS；
+  // 已經在用就提示，按「重新整理」再載入。
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;
+    if (performance.now() < 10000 && !tourActive() && !sessionStorage.getItem('il.swreload')) {
+      sessionStorage.setItem('il.swreload', '1');
+      location.reload();
+      return;
+    }
+    toast('App 已更新到新版本', { action: '重新整理', ms: 8000, onAction: () => location.reload() });
+  });
 }

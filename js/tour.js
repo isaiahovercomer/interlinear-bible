@@ -5,13 +5,16 @@
 // - plain visit → 首頁 steps, then into a chapter, then 設定.
 // - deep link (#John.3) → the user came for that passage: the tour waits until the reading view
 //   has loaded and leaves the 首頁 steps out (no jump away from the linked chapter).
-// Either way it ends on the tab where it began. Shown once: localStorage `il.tour`.
+// Either way it ends on the tab where it began. Shown once: localStorage `il.tour` = TOUR_VERSION.
 // 設定 › 「重新觀看使用教學」 replays the whole tour (replayTour()).
+// 教學版本：步驟有 `since: N` 表示第 N 版才加入。看過舊版（il.tour < TOUR_VERSION）的人不會重播整套，
+// 而是跳出小提示「有新功能介紹」，點「看看」只走新加的步驟。
 import { spring, reducedMotion } from './spring.js';
 import { sheet } from './sheet.js';
 import { h, $ } from './util.js';
 
 const KEY = 'il.tour';
+export const TOUR_VERSION = 2; // 新增步驟時加 1，並在新步驟標 since: TOUR_VERSION
 const PAD = 6;          // spotlight padding around the target (px)
 const GAP = 14;         // spotlight ↔ bubble
 const EDGE = 12;        // bubble ↔ viewport edge
@@ -25,20 +28,32 @@ const visibleIn = (el) => el && el.getClientRects().length > 0 && !el.closest('[
  * view: tab the step needs (null = any). card: word card open. select: a verse selected
  * (capsule toolbar shown). home: left out when the tour started from a deep link.
  * optional: shown only if the target already exists (no waiting) — e.g. 🔊.
- * wait: ms to wait for the target (default WAIT).
+ * wait: ms to wait for the target (default WAIT). A target returning SKIP stops waiting at once.
+ * since: tour version that added the step (old users are offered just these). title/text may be (el) => string.
  */
+const SKIP = 'skip';
+// 首頁晨興卡片：資料到了才出現；讀不到時首頁顯示今日經文，就改指那張（home.js 設 data-votd）
+const dailyCard = () => {
+  const mrv = $('#home-mrv'), votd = $('#home-votd'), st = document.documentElement.dataset.votd;
+  if (visibleIn(mrv)) return mrv;
+  if (st) return visibleIn(votd) ? votd : SKIP;
+  return null;
+};
+const isMrv = (el) => el?.id === 'home-mrv';
 const STEPS = [
   { id: 'continue', view: 'home', home: true, target: () => $('#home-continue'),
     title: '繼續閱讀', text: '從上次讀到的書卷章節接著讀；第一次使用會從馬太福音 1 開始。' },
-  { id: 'mrv', view: 'home', home: true, optional: true, target: () => $('#home-mrv'),
-    title: '今日晨興聖言經文', text: '每天自動換成當天的晨興聖言經文，有幾處就列幾處。點任一處就開到那一節，可以看原文、點字看字卡。' },
+  { id: 'mrv', view: 'home', home: true, since: 2, wait: 8000, target: dailyCard,
+    title: (el) => isMrv(el) ? '今日晨興聖言經文' : '今日經文',
+    text: (el) => isMrv(el) ? '每天自動換成當天的晨興聖言經文，有幾處就列幾處。點任一處就開到那一節，可以看原文、點字看字卡。'
+      : '每天一節經文。點它就開到那一節，可以看原文、點字看字卡。' },
   { id: 'search', view: 'home', home: true, target: () => $('#home-search'),
     title: '搜尋', text: '輸入經文出處（約3:16）、Strong 編號（G25）或字詞，都能找到。' },
   { id: 'books', view: 'home', home: true, target: () => $('#home-books .bookgrid[data-t="NT"]') || $('#home-books .bookgrid'),
     title: '選書卷', text: '書卷用簡稱排列（太、可、路…）。點一卷展開章號，再點章號就開始讀。' },
   { id: 'tabbar', view: null, target: () => $('#tabbar'),
     title: '底部分頁', text: '首頁、讀經、搜尋、書籤筆記、原文入門、設定，隨時一點切換。' },
-  { id: 'primer', view: null, target: () => $('#tabbar [data-tab="primer"]'),
+  { id: 'primer', view: null, since: 2, target: () => $('#tabbar [data-tab="primer"]'),
     title: '原文入門', text: '沒學過希臘文、希伯來文也沒關係：這裡教字母、讀音和拼讀，點字母就能聽發音。' },
   { id: 'swipe', view: 'read', target: () => cur()?.querySelector('.verse'),
     title: '左右滑動換章', text: '往左滑到下一章，往右滑回上一章。點上方的書卷章名可以快速選書。' },
@@ -78,23 +93,39 @@ let hooks = { setTab() {}, tab: () => 'home' };
 /** main.js: setTab(name), tab() → current tab name. */
 export function initTour(h) { hooks = { ...hooks, ...h }; }
 
-export const tourSeen = () => { try { return !!localStorage.getItem(KEY); } catch { return true; } };
+/** Tour version the user has seen: 0 = never; the old flag '1' = version 1. */
+export const tourSeenVersion = () => {
+  try { const v = localStorage.getItem(KEY); return v == null ? 0 : (parseInt(v, 10) || 1); } catch { return TOUR_VERSION; }
+};
+export const tourSeen = () => tourSeenVersion() > 0;
+const markSeen = () => { try { localStorage.setItem(KEY, String(TOUR_VERSION)); } catch {} };
+const newSteps = (seen) => STEPS.filter(s => (s.since || 1) > seen);
 
-/** First visit only. deepLink: started on #Book.Ch (reader already loaded). */
+/** First visit: the whole tour. deepLink: started on #Book.Ch (reader already loaded).
+ *  Seen an older version: a small prompt offers just the new steps (asked once). */
 export function maybeStartTour({ deepLink = false } = {}) {
-  if (tourSeen() || active) return;
-  start({ home: !deepLink });
+  if (active) return;
+  const seen = tourSeenVersion();
+  if (!seen) { start({ home: !deepLink }); return; }
+  if (seen >= TOUR_VERSION) return;
+  const fresh = newSteps(seen);
+  markSeen();
+  if (!fresh.length) return;
+  hooks.toast?.(`新功能：${fresh.map(s => typeof s.title === 'string' ? s.title : '今日晨興聖言經文').join('、')}`,
+    { action: '看介紹', ms: 12000, onAction: () => { if (!active) start({ home: true, steps: fresh }); } });
 }
 /** 設定 › 重新觀看使用教學: the full tour, from 首頁. */
 export function replayTour() { if (!active) start({ home: true }); }
+/** Just the steps added after version `seen` (the 新功能 prompt). */
+export function startNewStepsTour(seen = TOUR_VERSION - 1) { if (!active) start({ home: true, steps: newSteps(seen) }); }
 export const tourActive = () => !!active;
 
 // ---------- runtime ----------
 let active = null; // { steps, i, skipped:Set, found:Set, from, focus, el, ... }
 
-function start({ home }) {
-  try { localStorage.setItem(KEY, '1'); } catch {}
-  const steps = STEPS.filter(s => home || !s.home);
+function start({ home, steps: only }) {
+  markSeen();
+  const steps = (only || STEPS).filter(s => home || !s.home);
   active = { steps, i: -1, skipped: new Set(), found: new Set(), from: hooks.tab(), focus: document.activeElement, busy: false, hole: null, bub: null };
   build();
   go(0, 1);
@@ -143,6 +174,7 @@ async function waitFor(fn, ms) {
   const t0 = performance.now();
   for (;;) {
     const el = fn();
+    if (el === SKIP) return null;
     if (visibleIn(el)) return el;
     if (performance.now() - t0 >= ms) return null;
     await frame();
@@ -160,7 +192,7 @@ async function prepare(s) {
   if (s.card && !sheet.open) firstWord()?.click();
   if (!s.card && sheet.open) sheet.close();
   if (s.select && !$('#selbar.show')) cur()?.querySelector('.verse .vn')?.click();
-  if (s.id === 'tabbar') $('#tabbar').classList.remove('hide');
+  if (s.id === 'tabbar' || s.id === 'primer') $('#tabbar').classList.remove('hide');
   if (s.id === 'syntax') await cur()?._synReady;
 }
 
@@ -206,12 +238,14 @@ function render(s) {
   const a = active;
   const [n, total] = counter();
   const last = !a.steps.slice(a.i + 1).some(x => !a.skipped.has(x.id) && !x.optional);
-  a.titleEl.textContent = s.title;
-  a.textEl.textContent = s.text;
+  const title = typeof s.title === 'function' ? s.title(a.target) : s.title;
+  const text = typeof s.text === 'function' ? s.text(a.target) : s.text;
+  a.titleEl.textContent = title;
+  a.textEl.textContent = text;
   a.countEl.textContent = `${n} / ${total}`;
   a.prevBtn.disabled = n <= 1;
   a.nextBtn.textContent = last ? '完成' : '下一步';
-  a.live.textContent = `第 ${n} 步，共 ${total} 步。${s.title}。${s.text}`;
+  a.live.textContent = `第 ${n} 步，共 ${total} 步。${title}。${text}`;
   a.bubble.classList.remove('swap'); void a.bubble.offsetWidth; a.bubble.classList.add('swap');
   a.nextBtn.focus({ preventScroll: true });
   // spring the spotlight + bubble from where they are to the new target (follow() tracks it live)
