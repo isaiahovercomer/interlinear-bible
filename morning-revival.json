@@ -2,6 +2,86 @@
  "version": 1,
  "weeks": [
   {
+   "weekStart": "2026-11-09",
+   "week": "第四週",
+   "weekTitle": "獻上以撒並經歷神是叫死人復活的神",
+   "training": "二○二六年、九月秋季國際長老及負責弟兄訓練『亞伯拉罕、以撒、雅各的神』",
+   "days": {
+    "1": [
+     {
+      "label": "創二二1～2",
+      "book": "Gen",
+      "ch": 22,
+      "v": 1,
+      "v2": 2
+     }
+    ],
+    "2": [
+     {
+      "label": "約十二24",
+      "book": "John",
+      "ch": 12,
+      "v": 24
+     },
+     {
+      "label": "羅十一36",
+      "book": "Rom",
+      "ch": 11,
+      "v": 36
+     }
+    ],
+    "3": [
+     {
+      "label": "來十一17～19",
+      "book": "Heb",
+      "ch": 11,
+      "v": 17,
+      "v2": 19
+     }
+    ],
+    "4": [
+     {
+      "label": "羅四17",
+      "book": "Rom",
+      "ch": 4,
+      "v": 17
+     },
+     {
+      "label": "林後四16",
+      "book": "2Cor",
+      "ch": 4,
+      "v": 16
+     }
+    ],
+    "5": [
+     {
+      "label": "創二二17～18",
+      "book": "Gen",
+      "ch": 22,
+      "v": 17,
+      "v2": 18
+     }
+    ],
+    "6": [
+     {
+      "label": "腓三10",
+      "book": "Phil",
+      "ch": 3,
+      "v": 10
+     },
+     {
+      "label": "來十二22～23",
+      "book": "Heb",
+      "ch": 12,
+      "v": 22,
+      "v2": 23
+     }
+    ]
+   },
+   "by": "taipei+tamsui",
+   "hash": "2d7d53c6"
+  },
+  {
    "weekStart": "2026-11-02",
    "week": "第三週",
    "weekTitle": "兩個婦人的寓意",
@@ -97,19 +177,17 @@
   "fallback": "https://churchintamsui.wixsite.com/index/morning-revival",
   "taipei": {
    "ok": true,
-   "range": "11/2～11/8",
-   "week": "第三週",
-   "title": "秋季國際長老同工訓練信息 第三週"
+   "range": "11/9～11/15",
+   "week": "第四週",
+   "title": "秋季國際長老同工訓練信息 第四週"
   },
   "tamsui": {
    "ok": true,
-   "week": "第三週",
-   "weekTitle": "兩個婦人的寓意"
+   "week": "第四週",
+   "weekTitle": "獻上以撒並經歷神是叫死人復活的神"
   },
   "match": true,
   "diff": [],
-  "warnings": [
-   "週五：「加26」缺章數，沿用同一天前一處的第 3 章"
-  ]
+  "warnings": []
  }
 }
