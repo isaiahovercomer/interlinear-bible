@@ -13,6 +13,8 @@ export const ICONS = {
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
   syntax: '<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v5M6 17v-2.5c0-1.4 1.1-2.5 2.5-2.5h7c1.4 0 2.5 1.1 2.5 2.5V17"/>',
+  speak: '<path d="M4 10v4h3.2L12 18V6L7.2 10z"/><path d="M15.2 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.6 7a6.4 6.4 0 0 1 0 10"/>',
+  stop: '<rect x="7" y="7" width="10" height="10" rx="1.5"/>',
 };
 
 /** icon('close') → <svg class="ic" …> (decorative: aria-hidden; label the button instead). */

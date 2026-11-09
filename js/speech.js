@@ -88,12 +88,21 @@ function unlockAudio() {
   s.buffer = ctx.createBuffer(1, 1, 22050);
   s.connect(ctx.destination); s.start(0);
 }
-function stopAll() {
+function stopAll(cancelSpeech = true) {
   seq++;
   try { source?.stop(); } catch {}
   source = null;
-  if (synthOK()) speechSynthesis.cancel();
+  if (cancelSpeech && synthOK()) {
+    try { speechSynthesis.cancel(); } catch { /* API missing */ }
+  }
+  // Verse reading (verse-speech.js) drops its indicator. One sound at a time.
+  try { dispatchEvent(new CustomEvent('il:pron-halt')); } catch { /* no window */ }
 }
+/**
+ * Stop word-card audio. `cancelSpeech: false` skips speechSynthesis.cancel() so a verse can
+ * call speak() in the same tap (Chrome drops speak() in the same turn as cancel() when idle).
+ */
+export function haltPronunciation(opts) { stopAll(opts?.cancelSpeech !== false); }
 function play(pcm, rate) {
   const buf = ctx.createBuffer(1, pcm.length, rate);
   buf.copyToChannel(pcm, 0);

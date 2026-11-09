@@ -14,6 +14,10 @@ import { syntaxView, syntaxVerses } from './syntax.js';
 import { icon } from './icons.js';
 import { shotAndShare, fileSafe } from './shot.js';
 import { out as zhOut } from './zh.js';
+import { haltPronunciation } from './speech.js';
+import { bindVerseSpeech, verseSayButton, stopVerseSpeech, VERSE_SPEECH_NOTE } from './verse-speech.js';
+
+bindVerseSpeech({ halt: haltPronunciation });
 
 const pager = $('#pager');
 const titleBtn = $('#title');
@@ -64,7 +68,11 @@ export async function open(ref, { v, flash = !!v } = {}) {
   else if (!same) pages[1].scrollTop = 0;
 }
 
+let speechChapter = null;
 function chapterChanged() {
+  const key = cur ? `${cur.book}.${cur.ch}` : '';
+  if (speechChapter !== null && speechChapter !== key) stopVerseSpeech();
+  speechChapter = key;
   setTitle(cur);
   syntaxIcons(pages[1]);
   hooks.onChapter(cur);
@@ -208,7 +216,10 @@ function buildChapter(ref, orig, oc, trs, tcs, failed) {
   const b = BOOK[ref.book];
   const root = h('div.chapter', { 'data-key': `${ref.book}.${ref.ch}` });
   root.append(h('h2.chead', `${b.zh} ${ref.ch}`));
-  if (orig && oc?.verses?.length) root.append(h('p.ed-line', { lang: 'zh-Hant' }, h('span.ed-dot', { 'aria-hidden': 'true' }), chapterCaption(orig.lang)));
+  if (orig && oc?.verses?.length) {
+    root.append(h('p.ed-line', { lang: 'zh-Hant' }, h('span.ed-dot', { 'aria-hidden': 'true' }), chapterCaption(orig.lang)));
+    root.append(h('p.vs-note', { lang: 'zh-Hant' }, VERSE_SPEECH_NOTE));
+  }
   const nums = new Set();
   const ov = new Map(oc?.verses?.map(v => [v.n, v]) || []);
   const tv = tcs.map(c => new Map(c?.verses?.map(v => [v.n, v]) || []));
@@ -223,7 +234,15 @@ function buildChapter(ref, orig, oc, trs, tcs, failed) {
     sec.append(h('button.vn', { type: 'button', 'aria-label': vnLabel(n) }, n === 0 ? '題' : n));
     const body = h('div.vb');
     const o = ov.get(n);
-    if (o?.w) body.append(origLine(o, orig));
+    if (o?.w) {
+      const line = origLine(o, orig);
+      const say = verseSayButton({
+        n, lang: orig?.lang, verse: o,
+        stripCantillation: orig?.dir === 'rtl' && !settings.hebAccents,
+      });
+      if (say) line.append(' ', say);
+      body.append(line);
+    }
     trs.forEach((v, i) => { const t = tv[i].get(n); if (t) body.append(trLine(t, v)); });
     sec.append(body);
     const stop = body.querySelector('.w,.tk');
@@ -311,6 +330,7 @@ function appendText(el, t) {
 /** Re-render all three pages (settings changed), keeping the reading position. */
 export async function rerender() {
   if (!cur) return;
+  stopVerseSpeech();
   const page = pages[1];
   const anchor = topVisibleVerse(page);
   await Promise.all([renderInto(pages[0], neighbor(cur, -1)), renderInto(page, cur), renderInto(pages[2], neighbor(cur, 1))]);

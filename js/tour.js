@@ -19,7 +19,7 @@ import { syntaxVerses } from './syntax.js';
 import { canSpeak } from './speech.js';
 
 const KEY = 'il.tour';
-export const TOUR_VERSION = 2; // 新增步驟時加 1，並在新步驟標 since: TOUR_VERSION
+export const TOUR_VERSION = 3; // 新增步驟時加 1，並在新步驟標 since: TOUR_VERSION
 const PAD = 6;          // spotlight padding around the target (px)
 const GAP = 14;         // spotlight ↔ bubble
 const EDGE = 12;        // bubble ↔ viewport edge
@@ -79,6 +79,9 @@ const STEPS = [
     title: '複製與截圖', text: '「複製」把原文、音譯、Strong 編號、字義和出處複製成文字；「截圖」把字卡做成圖片，可以直接分享或存下來。' },
   { id: 'parallel', view: 'read', target: () => [...(cur()?.querySelectorAll('.verse .vb') || [])].find(b => b.querySelector('.tr')),
     title: '平行經文', text: '每節先列原文，下面是你選的譯本，右側小字是版本縮寫。要顯示哪些譯本、順序如何，在設定裡切換。' },
+  { id: 'verse-say', view: 'read', since: 3, target: () => cur()?.querySelector('.verse .orig .vs-say'),
+    title: '朗讀原文',
+    text: '原文旁的喇叭用這台裝置的現代希臘語（el-GR）或現代以色列希伯來語（he-IL）朗讀整節，不是古音，也不是本 App 下載的語音。聲調、母音和吟誦符號可能不準；裝置沒有這種語音時，會告訴你到系統設定安裝。' },
   // shown when the chapter has syntax data (prepare() waits for the icons, then no extra wait)
   { id: 'syntax', view: 'read', wait: 0, target: () => cur()?.querySelector('.verse .orig .syn-ic'),
     will: async ({ ref, lang }) => !!settings.syntaxIcons && !!syntaxInfo(lang) && (await syntaxVerses(lang, ref.book, ref.ch)).length > 0,

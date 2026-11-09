@@ -621,6 +621,19 @@ html[data-zh="hans"] .wc-def.clamp.cut::after { content: "…（全文见全屏�
 .syn-ic::before { content: ""; position: absolute; inset: -8px; } /* larger touch target */
 .syn-ic .ic { width: 14px; height: 14px; }
 .syn-ic:hover, .syn-ic:focus-visible { color: var(--accent); }
+.vs-note {
+  margin: -4px 8px 12px 32px; font: 12px/1.45 var(--ui); color: var(--muted);
+}
+.vs-say {
+  position: relative; display: inline-grid; place-items: center; width: 22px; height: 22px;
+  margin-inline-start: 4px; vertical-align: -4px; color: var(--muted); border-radius: 6px; line-height: 1;
+}
+.vs-say::before { content: ""; position: absolute; inset: -9px; }
+.vs-say .ic { width: 16px; height: 16px; }
+.vs-say:hover, .vs-say:focus-visible { color: var(--accent); }
+.vs-say:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.vs-say[data-vs="playing"] { color: var(--accent); }
+.vs-say[data-vs="paused"] { color: var(--fg2); }
 .syn-ic:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .no-syn-icons .syn-ic { display: none; }
 .syn-tree, .syn-kids { list-style: none; margin: 0; padding: 0; }

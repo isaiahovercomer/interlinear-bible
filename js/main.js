@@ -5,6 +5,7 @@ import { setScript } from './zh.js';
 import { parseKey, parseRef } from './ref.js';
 import { BOOK } from './books.js';
 import * as reader from './reader.js';
+import { stopVerseSpeech } from './verse-speech.js';
 import { sheet } from './sheet.js';
 import { initPicker, openPicker, close as closePicker, isOpen as pickerOpen } from './picker.js';
 import { initSearch, run as runSearch } from './search.js';
@@ -13,8 +14,11 @@ import { initPrimer, renderPrimer } from './primer.js';
 import { renderNotes, initNotes } from './notesview.js';
 import { initHome, homeReady, renderHome, lastRead, DEFAULT_START, dailyReady } from './home.js';
 import { initTour, maybeStartTour, tourActive } from './tour.js';
+import { maybeInstallPrompt } from './install.js';
 import { $, $$, h, transition, toast } from './util.js';
 
+// ?install=1（LINE 圖卡「加到手機主畫面」）：一打開就顯示加到主畫面的提示，這次不跑教學
+const installing = maybeInstallPrompt();
 const tabbar = $('#tabbar');
 let tab = 'read';
 // a #Book.Ch deep link opens the reader; a plain visit lands on 首頁
@@ -29,6 +33,7 @@ function hideBars() {
 
 // ---------- tabs ----------
 function showTab(name) {
+  if (name !== 'read') stopVerseSpeech();
   tab = name;
   for (const v of $$('.view')) {
     if (v.dataset.view === 'read') v.toggleAttribute('inert', name !== 'read');
@@ -114,7 +119,7 @@ async function boot() {
   if (deepLink) await reader.open(deepLink, { v: deepLink.v });
   document.documentElement.dataset.ready = '1';
   // first visit: coach marks (after a deep link: now that the chapter is on screen, see tour.js)
-  maybeStartTour({ deepLink: !!deepLink });
+  if (!installing) maybeStartTour({ deepLink: !!deepLink });
 }
 boot();
 
