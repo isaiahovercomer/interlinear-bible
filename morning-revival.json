@@ -2,6 +2,108 @@
  "version": 1,
  "weeks": [
   {
+   "weekStart": "2026-11-16",
+   "week": "第五週",
+   "weekTitle": "過享受恩典的生活，使神喜悅",
+   "training": "二○二六年、九月秋季國際長老及負責弟兄訓練『亞伯拉罕、以撒、雅各的神』",
+   "days": {
+    "1": [
+     {
+      "label": "創二五5",
+      "book": "Gen",
+      "ch": 25,
+      "v": 5
+     },
+     {
+      "label": "創二六12",
+      "book": "Gen",
+      "ch": 26,
+      "v": 12
+     },
+     {
+      "label": "林前十五10",
+      "book": "1Cor",
+      "ch": 15,
+      "v": 10
+     }
+    ],
+    "2": [
+     {
+      "label": "創十七1",
+      "book": "Gen",
+      "ch": 17,
+      "v": 1
+     },
+     {
+      "label": "創十八14",
+      "book": "Gen",
+      "ch": 18,
+      "v": 14
+     }
+    ],
+    "3": [
+     {
+      "label": "加六18",
+      "book": "Gal",
+      "ch": 6,
+      "v": 18
+     },
+     {
+      "label": "彼後三18",
+      "book": "2Pet",
+      "ch": 3,
+      "v": 18
+     },
+     {
+      "label": "彼前五10",
+      "book": "1Pet",
+      "ch": 5,
+      "v": 10
+     }
+    ],
+    "4": [
+     {
+      "label": "來四16",
+      "book": "Heb",
+      "ch": 4,
+      "v": 16
+     },
+     {
+      "label": "啓二二1",
+      "book": "Rev",
+      "ch": 22,
+      "v": 1
+     }
+    ],
+    "5": [
+     {
+      "label": "創二六13",
+      "book": "Gen",
+      "ch": 26,
+      "v": 13
+     },
+     {
+      "label": "約一16～17",
+      "book": "John",
+      "ch": 1,
+      "v": 16,
+      "v2": 17
+     }
+    ],
+    "6": [
+     {
+      "label": "創二六24～25",
+      "book": "Gen",
+      "ch": 26,
+      "v": 24,
+      "v2": 25
+     }
+    ]
+   },
+   "by": "taipei+tamsui",
+   "hash": "849e7c76"
+  },
+  {
    "weekStart": "2026-11-09",
    "week": "第四週",
    "weekTitle": "獻上以撒並經歷神是叫死人復活的神",
@@ -87,14 +189,14 @@
   "fallback": "https://churchintamsui.wixsite.com/index/morning-revival",
   "taipei": {
    "ok": true,
-   "range": "11/9～11/15",
-   "week": "第四週",
-   "title": "秋季國際長老及負責弟兄訓練信息 第四週"
+   "range": "11/16～11/22",
+   "week": "第五週",
+   "title": "秋季國際長老及負責弟兄訓練信息 第五週"
   },
   "tamsui": {
    "ok": true,
-   "week": "第四週",
-   "weekTitle": "獻上以撒並經歷神是叫死人復活的神"
+   "week": "第五週",
+   "weekTitle": "過享受恩典的生活，使神喜悅"
   },
   "match": true,
   "diff": [],
